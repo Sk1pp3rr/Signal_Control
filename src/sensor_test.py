@@ -11,7 +11,7 @@ print(f"Looking for file in: {CONFIG_PATH}")
 
 if not os.path.exists(CONFIG_PATH):
     print("file not found")
-    # To co widzi python
+    # Python view:
     print(f"Upstream folder: {os.listdir(os.path.join(BASE_DIR, '..'))}")
     sys.exit()
 
@@ -44,7 +44,6 @@ def run_test():
                 if veh_count > 0:
                     print(f"Step {step} | Detector: {det_id} | Cars: {veh_count} | Jam: {jam_length}")
             except traci.exceptions.TraCIException:
-                # To się stanie, jeśli ID detektora w Pythonie nie zgadza się z tym w .add.xml
                 # ID of detector in python do not match with this in .add.xml
                 print(f"️ failed to find detector: {det_id}")
 
