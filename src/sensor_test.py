@@ -1,18 +1,18 @@
 import os
 import sys
 
-# Pobieramy ścieżkę do folderu, w którym znajduje się ten skrypt (src)
+# Downloading path where file is
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Budujemy ścieżkę: wyjdź wyżej (..), wejdź do maps -> krzyzak -> plik
+# path from src to sumo config
 CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
 
-print(f"Szukam pliku w: {CONFIG_PATH}")
+print(f"Looking for file in: {CONFIG_PATH}")
 
 if not os.path.exists(CONFIG_PATH):
-    print("❌ Wciąż nie widzę pliku! Sprawdź czy foldery się zgadzają.")
-    # Tutaj możesz wypisać co widzi Python:
-    print(f"Zawartość folderu nadrzędnego: {os.listdir(os.path.join(BASE_DIR, '..'))}")
+    print("file not found")
+    # To co widzi python
+    print(f"Upstream folder: {os.listdir(os.path.join(BASE_DIR, '..'))}")
     sys.exit()
 
 import traci
@@ -21,17 +21,16 @@ DETECTORS = ["e2_0", "e2_1", "e2_2", "e2_3"]
 
 
 def run_test():
-    # Używamy r"..." dla ścieżek na Windowsie!
     sumo_cmd = ["sumo-gui", "-c", CONFIG_PATH, "--start"]
 
     try:
         traci.start(sumo_cmd)
-        print("✅ SUMO uruchomione poprawnie!")
+        print("SUMO boot success")
     except Exception as e:
-        print(f"❌ Nie udało się uruchomić SUMO: {e}")
+        print(f"SUMO boot failed: {e}")
         return
 
-    print("--- START TESTU DETEKTORÓW ---")
+    print("--- DETECTORS TEST START ---")
 
     step = 0
     while step < 1000:
@@ -43,18 +42,19 @@ def run_test():
                 veh_count = traci.lanearea.getLastStepVehicleNumber(det_id)
 
                 if veh_count > 0:
-                    print(f"Krok {step} | Detektor: {det_id} | Auta: {veh_count} | Korek: {jam_length}")
+                    print(f"Step {step} | Detector: {det_id} | Cars: {veh_count} | Jam: {jam_length}")
             except traci.exceptions.TraCIException:
                 # To się stanie, jeśli ID detektora w Pythonie nie zgadza się z tym w .add.xml
-                print(f"⚠️ Nie znaleziono detektora o ID: {det_id}")
+                # ID of detector in python do not match with this in .add.xml
+                print(f"️ failed to find detector: {det_id}")
 
         step += 1
         if traci.simulation.getMinExpectedNumber() <= 0:
-            print("Wszystkie auta opuściły symulację.")
+            print("All cars left simulation.")
             break
 
     traci.close()
-    print("--- KONIEC TESTU ---")
+    print("--- END OF TEST ---")
 
 
 if __name__ == "__main__":
