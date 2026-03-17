@@ -1,0 +1,6 @@
+<configuration>
+    <input>
+        <net-file value="krzyzak.net.xml"/>
+        <route-files value="test2.rou.xml"/>
+    </input>
+</configuration>
