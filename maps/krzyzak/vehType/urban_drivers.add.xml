@@ -1,0 +1,40 @@
+<additional>
+    <vTypeDistribution id="urban_cars">
+        <vType id="car_aggressive" vClass="passenger" accel="3.5" decel="6.0" sigma="0.1" tau="0.7" 
+               length="4.5" minGap="1.5" maxSpeed="60" color="red" guiShape="passenger"/>
+        
+        <vType id="car_standard" vClass="passenger" accel="2.6" decel="4.5" sigma="0.5" tau="1.0" 
+               length="4.7" minGap="2.5" color="white" guiShape="passenger" probability="0.7"/>
+        
+        <vType id="car_cautious" vClass="passenger" accel="1.5" decel="3.0" sigma="0.9" tau="1.8" 
+               length="4.5" minGap="4.0" color="blue" guiShape="passenger" probability="0.15"/>
+    </vTypeDistribution>
+
+    <vType id="ev_car" vClass="evehicle" accel="4.0" decel="5.0" sigma="0.2" tau="0.9" 
+           length="4.2" minGap="2.0" color="0,255,0" guiShape="passenger/sedan"/>
+
+    <vType id="city_bus" vClass="bus" accel="1.2" decel="4.0" length="12.0" 
+           color="yellow" guiShape="bus" personCapacity="80"/>
+    
+    <vType id="taxi" vClass="taxi" accel="2.8" decel="5.0" tau="1.0" 
+           length="4.8" color="black" guiShape="passenger/sedan"/>
+
+    <vType id="delivery_van" vClass="delivery" accel="2.0" decel="4.5" length="6.5" 
+           color="orange" guiShape="delivery"/>
+    
+    <vType id="heavy_truck" vClass="truck" accel="0.8" decel="3.0" length="15.0" 
+           color="0.3,0.3,0.3" guiShape="truck/semitrailer"/>
+
+    <vType id="police" vClass="authority" accel="4.0" decel="6.0" length="4.8" 
+           color="blue" guiShape="emergency" speedFactor="1.2"/>
+    
+    <vType id="ambulance" vClass="emergency" accel="3.0" decel="5.0" length="6.0" 
+           color="white" guiShape="emergency" speedFactor="1.1"/>
+    
+    <vType id="fire_truck" vClass="emergency" accel="1.5" decel="4.0" length="10.0" 
+           color="red" guiShape="firebrigade" speedFactor="1.0"/>
+
+    <vType id="pedestrian_default" vClass="pedestrian" length="0.5" width="0.5" 
+           minGap="0.2" maxSpeed="1.4" guiShape="pedestrian"/>
+
+</additional>

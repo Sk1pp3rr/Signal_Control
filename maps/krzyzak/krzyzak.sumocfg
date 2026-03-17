@@ -1,0 +1,5 @@
+<input>
+    <net-file value="krzyzak.net.xml"/>
+    <route-files value="lightMap.rou.xml"/>
+    <additional-files value="mapa.add.xml,vehType\urban_drivers.add.xml"/>
+</input>

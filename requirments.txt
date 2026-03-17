@@ -1,0 +1,9 @@
+traci
+sumolib
+gymnasium
+stable-baselines3
+shimmy
+matplotlib
+numpy
+pandas
+tensorboard
