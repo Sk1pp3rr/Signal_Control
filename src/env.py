@@ -55,17 +55,17 @@ class SumoEnv(gym.Env):
 
         #phase switch
         phase = 0 if action == 0 else 2
-        self.sumo.set_traffic_light_phase("J25", phase)
+        self.sumo.set_traffic_light_phase("J6", phase)
 
         for _ in range(10):
             traci.simulationStep() # jump in time
 
-        obs = self.get_detector_data()
+        obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
         reward = self._get_reward(obs)
         done = False  # If simulation ended
 
-        return obs, reward, done, False, {}
-
+        #gymnasium requires: obs, reward, terminated, truncated, info
+        return obs, reward, False, False, {}
 
     def _get_reward(self, obs):
         #mathematical evaluation of situation in SUMO
