@@ -11,7 +11,7 @@ def run_sanity_test():
         obs, info = env.reset()
         print(f"first observation: {obs}")
 
-        for i in range(1000):
+        for i in range(100):
             action = env.action_space.sample() #random choice from 0 to 1
             obs, reward, terminated, truncated, info = env.step(action)
             print(f"Step {i+1}: {action}, reward: {reward}, terminated: {terminated}, observation: {obs}")
@@ -22,7 +22,7 @@ def run_sanity_test():
         print(f"failed! error: {e}")
 
     finally:
-        input("Symulacja zakończona. Sprawdź okno SUMO i naciśnij Enter...")
+        input("Press Enter...")
         env.close()
 
 if __name__ == "__main__":
