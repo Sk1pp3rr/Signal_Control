@@ -1,8 +1,8 @@
-# Step 1: Agent should get vector with the reflection of the world eg. [3,0,0,0], it says that there are 3 cars in traffic jam on first line. spaces.Box?
-# Step 2: Definition of action possible to be done by the agent, for 2 line intersection it would be just two actions with buffor action(yellow light).
-# Agent does not have control on indiviudal lights but only on phases defined in SUMO!!!
-# Step 3: Cycle logic: Get action from AI (eg. Agent choses 0) -> Send command to SUMO by TraCI -> Do jump in time eg. 5s -> check sensors -> Get the reward
-# Step 4: Reward func for start kindergarden this will probably work: -(sum of caars in congestions on all detectors), Agent will try to minimalize his punishment
+# Step 1: Agent should get vector with the reflection of the world e.g. [3,0,0,0], it says that there are 3 cars in traffic jam on first line. spaces.Box?
+# Step 2: Definition of action possible to be done by the agent, for 2 line intersection it would be just two actions with buffer action(yellow light).
+# Agent does not have control on individual lights but only on phases defined in SUMO!!!
+# Step 3: Cycle logic: Get action from AI (e.g. Agent chooses 0) -> Send command to SUMO by TraCI -> Do jump in time e.g. 5s -> check sensors -> Get the reward
+# Step 4: Reward func for start kindergarden this will probably work: -(sum of cars in congestions on all detectors), Agent will try to minimalize his punishment
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -24,7 +24,7 @@ class SumoEnv(gym.Env):
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
-        # 0: vertical green light, 1: horizzontaly green light
+        # 0: vertical green light, 1: horizontally green light
         self.action_space = spaces.Discrete(2) #discrete action of possible "two buttons"
         self.config_path = config_path
         self.gui = gui
@@ -43,7 +43,7 @@ class SumoEnv(gym.Env):
     def step(self,
              action #action performed by Agent
              ):
-        #TODO: Definition od step 3 and 4 (action->Time->Reward)
+        #TODO: Definition of step 3 and 4 (action->Time->Reward)
         #1.Perform action
         #2.Move forward in time eg. 5s
         #3.Fetch new data from detectors
