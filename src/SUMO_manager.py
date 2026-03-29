@@ -19,7 +19,7 @@ class SumoManager:
         """Set the traffic light phase on the specified junction_id"""
         traci.trafficlight.setPhase(phase, junction_id)
 
-    def get_dettector_data(self):
+    def get_detector_data(self):
         """Get the detection detector data"""
         data = []
         for detector in self.DETECTORS:

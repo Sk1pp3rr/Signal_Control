@@ -8,6 +8,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import traci
+import SUMO_manager
 
 class SumoEnv(gym.Env):
     def __init__(self,
@@ -15,6 +16,7 @@ class SumoEnv(gym.Env):
                  gui=False #weather we want to use GUI
                  ):
         #TODO: Definition of step 1 and 2
+        self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
         #---Step 1: Observation space---
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 20
         self.observation_space = spaces.Box(
@@ -34,8 +36,10 @@ class SumoEnv(gym.Env):
               options = None
               ):
         #TODO: restart of SUMO env for nest trial
+        self.sumo.close_sim() #If there were any simulations running close them.
+        self.sumo.start_sim() #Start new simulation
 
-        #func to open TraCI
+        obs = self.sumo.get_detector_data()
 
         initial_obs = np.zeros(4, dtype=np.float32)
         return initial_obs, {}
@@ -49,16 +53,19 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
 
-        obs = self._get_obs()
+        #phase switch
+        phase = 0 if action == 0 else 2
+        self.sumo.set_traffic_light_phase("J25", phase)
+
+        for _ in range(10):
+            traci.simulationStep() # jump in time
+
+        obs = self.get_detector_data()
         reward = self._get_reward(obs)
         done = False  # If simulation ended
 
         return obs, reward, done, False, {}
 
-    def _get_obs(self):
-        #getter of observation data
-
-        return np.zeros(4, dtype=np.float32)
 
     def _get_reward(self, obs):
         #mathematical evaluation of situation in SUMO
