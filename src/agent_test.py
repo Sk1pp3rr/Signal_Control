@@ -10,7 +10,7 @@ def test_trained_agent():
     MODEL_PATH = os.path.join(BASE_DIR, "model_krzyzak_v1.zip")
 
     # 2. Init from GUI
-    # guii=True, to watch the agent
+    # gui=True, to watch the agent
     env = SumoEnv(CONFIG_PATH, gui=True)
 
     # 3. Loading trained model
