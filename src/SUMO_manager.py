@@ -27,4 +27,12 @@ class SumoManager:
             data.append(count) # add them to our vector
         return data # e.g. [3,2,0,5]
 
+    def get_waiting_time_data(self):
+        """Get the waiting time detector data"""
+        total_waiting_time = 0
+        for detector in self.DETECTORS:
+            # Get total weiting time from each generator
+            total_waiting_time += traci.lanearea.getWaitingTime(detector)
+        return total_waiting_time
+
 

@@ -16,6 +16,10 @@ class SumoEnv(gym.Env):
                  gui=False #weather we want to use GUI
                  ):
         #TODO: Definition of step 1 and 2
+
+        self.current_step = 0
+        self.max_steps = 500
+
         self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
         #---Step 1: Observation space---
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 20
@@ -36,12 +40,13 @@ class SumoEnv(gym.Env):
               options = None
               ):
         #TODO: restart of SUMO env for nest trial
+        self.current_step = 0
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
 
         obs = self.sumo.get_detector_data()
 
-        initial_obs = np.zeros(4, dtype=np.float32)
+        initial_obs = np.array(obs, dtype=np.float32)
         return initial_obs, {}
 
     def step(self,
@@ -52,20 +57,22 @@ class SumoEnv(gym.Env):
         #2.Move forward in time eg. 5s
         #3.Fetch new data from detectors
         #4.Get the reward
-
+        self.current_step += 1
         #phase switch
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
-        for _ in range(10):
+        for _ in range(50):
             traci.simulationStep() # jump in time
 
         obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
         reward = self._get_reward(obs)
-        done = False  # If simulation ended
+
+        truncated = self.current_step >= self.max_steps
+        terminated = traci.simulation.getMinExpectedNumber() <= 0
 
         #gymnasium requires: obs, reward, terminated, truncated, info
-        return obs, reward, False, False, {}
+        return obs, reward, terminated, truncated, {}
 
     def _get_reward(self, obs):
         #mathematical evaluation of situation in SUMO

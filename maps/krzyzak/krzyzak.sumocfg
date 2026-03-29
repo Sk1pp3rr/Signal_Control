@@ -1,5 +1,15 @@
-<input>
-    <net-file value="krzyzak.net.xml"/>
-    <route-files value="lightMap.rou.xml"/>
-    <additional-files value="mapa.add.xml,vehType\urban_drivers.add.xml"/>
-</input>
+<configuration>
+    <input>
+        <net-file value="krzyzak.net.xml"/>
+    	<route-files value="lightMap.rou.xml"/>
+    	<additional-files value="mapa.add.xml,vehType\urban_drivers.add.xml"/>
+    </input>
+
+    <processing>
+        <step-length value="0.1"/>
+    </processing>
+    
+    <report>
+        <no-step-log value="true"/>
+    </report>
+</configuration>
