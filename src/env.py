@@ -32,6 +32,7 @@ class SumoEnv(gym.Env):
         #---Step 2: Action Space---
         # 0: vertical green light, 1: horizontally green light
         self.action_space = spaces.Discrete(2) #discrete action of possible "two buttons"
+        self.last_action = 0 # last action performed by agent
         self.config_path = config_path
         self.gui = gui
 
@@ -43,6 +44,8 @@ class SumoEnv(gym.Env):
         self.current_step = 0
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
+        self.last_action = 0
+
 
         obs = self.sumo.get_detector_data()
 
@@ -58,12 +61,22 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
+        #if there were some action performed by agent use buffor of yellow light
+        if action != self.last_action:
+            yellow_phase = 1 if self.last_action == 0 else 3
+
+            self.sumo.set_traffic_light_phase("J6", yellow_phase)
+            #skip for 3 minutes
+            for _ in range(30):
+                traci.simulationStep()
         #phase switch
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
         for _ in range(50):
             traci.simulationStep() # jump in time
+
+        self.last_action = action # save last action
 
         obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
         reward = self._get_reward(obs)

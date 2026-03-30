@@ -4,11 +4,10 @@ from env import SumoEnv
 import os
 
 def train():
-    # Ścieżka do mapy
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
 
-    # 1. Inicjalizacja środowiska
+    # 1. Init of environment
     env = SumoEnv(CONFIG_PATH, gui=False)
 
     RESULTS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "results"))
@@ -31,7 +30,6 @@ def train():
         print("Training interrupted by user")
 
 
-    # 4. Zapisanie modelu
     model.save("model_krzyzak_v1")
     print("Model saved!")
 
