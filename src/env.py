@@ -61,10 +61,11 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
+        action_changed = action != self.last_action
+
         #if there were some action performed by agent use buffor of yellow light
         if action != self.last_action:
             yellow_phase = 1 if self.last_action == 0 else 3
-
             self.sumo.set_traffic_light_phase("J6", yellow_phase)
             #skip for 3 minutes
             for _ in range(30):
@@ -73,13 +74,17 @@ class SumoEnv(gym.Env):
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
+
+
         for _ in range(50):
             traci.simulationStep() # jump in time
+
+        metrics = self.sumo.get_junction_metrics()
 
         self.last_action = action # save last action
 
         obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
-        reward = self._get_reward(obs)
+        reward = self._get_reward(obs,action_changed,metrics)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
@@ -87,11 +92,29 @@ class SumoEnv(gym.Env):
         #gymnasium requires: obs, reward, terminated, truncated, info
         return obs, reward, terminated, truncated, {}
 
-    def _get_reward(self, obs):
+    def _get_reward(self, obs, action_changed,metrics):
         #mathematical evaluation of situation in SUMO
+        hc = 1 #multiplayer of queue_penalty for cars
+        jc = 0.2 #multiplayer of waiting time penalty for cars
+        oc = 0.5
 
-        reward = -float(np.sum(obs))
-        return reward
+        #num of cars in queue
+        halt_penalty = metrics['total_halting']
+        occ_penalty = metrics['occupancy']
+        jam_penalty = metrics['max_jam_length']
+
+        #waiting time for all detectors
+        # waiting_times = self.sumo.get_waiting_time_data()
+        # waiting_penalty = np.sum(waiting_times)
+
+        #switching penalty to avoid DISCO
+        switch_penalty = 1.0 if action_changed else 0.0
+
+        #full reward
+        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty)
+
+
+        return float(reward)
 
     def close(self):
         #cleaning

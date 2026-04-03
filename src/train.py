@@ -30,7 +30,7 @@ def train():
         print("Training interrupted by user")
 
 
-    model.save("model_krzyzak_v1")
+    model.save("model_krzyzak_v3")
     print("Model saved!")
 
 if __name__ == "__main__":

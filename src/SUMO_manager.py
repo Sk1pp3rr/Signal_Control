@@ -37,4 +37,16 @@ class SumoManager:
             total_waiting_time += traci.lanearea.getWaitingTime(detector)
         return total_waiting_time
 
+    def get_junction_metrics(self):
+        """Download raw data from SUMO junction"""
+        metrics = {
+            'total_halting': 0,
+            'max_jam_length': 0,
+            'occupancy': 0
+        }
+        for detector in self.DETECTORS:
 
+            metrics['total_halting'] += traci.lanearea.getLastStepHaltingNumber(detector)
+            metrics['max_jam_length'] += traci.lanearea.getLastIntervalMaxJamLengthInMeters(detector)
+            metrics['occupancy'] += traci.lanearea.getLastStepOccupancy(detector)
+        return metrics
