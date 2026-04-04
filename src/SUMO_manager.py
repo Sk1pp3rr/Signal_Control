@@ -1,6 +1,9 @@
 from asyncio import wait
 
 import traci
+from sympy import true
+from torch.fx.experimental.proxy_tensor import track_tensor
+
 
 class SumoManager:
     def __init__(self, config_path, gui=False):
@@ -50,3 +53,22 @@ class SumoManager:
             metrics['max_jam_length'] += traci.lanearea.getLastIntervalMaxJamLengthInMeters(detector)
             metrics['occupancy'] += traci.lanearea.getLastStepOccupancy(detector)
         return metrics
+
+     #funkja sprawdza czy mamy ambulans na mapie lub czy utknela w korku
+    def get_ambulance_metrics(self):
+        is_ambulance=False #ustawiamy flagi
+        is_ambulance_stuck=False
+        #logika sprawdzenia czy mamy na mapie ambulans
+        vehicle_id=traci.vehicle.get_IDList() #pobieramy cala liste samochodow ktore znajduja sie na mapie
+        for i in vehicle_id:
+            if traci.vehicle.getTypeID(i) == "ambulance": #sprawdzamy czy sposrod aut mamy ambulans
+                is_ambulance=True #jesli tak to true
+
+                # ponizej logika sprawdzenia czy ambulans stoi
+                speed=traci.vehicle.getSpeed(i) #pobieramy predkosc
+                if speed<0.5: #tutaj mozna sprawdzic czy taka predkosc bedzie git (najwyzej sie zmieni)
+                    is_ambulance_stuck=True
+
+                break #jesli znalezlismy to stop
+
+        return is_ambulance, is_ambulance_stuck
