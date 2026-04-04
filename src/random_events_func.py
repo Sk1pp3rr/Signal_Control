@@ -4,7 +4,7 @@ import random
 class eventManager:
     def __init__(self, sumo_env):
         self.env = sumo_env
-        self.avaliable_routes = []
+        self.available_routes = []
 
     #makes list of all avaliable routes defined in simulation
     def find_rotes(self):
@@ -26,7 +26,7 @@ class eventManager:
 
     def emergnecy_vechicle_deployment(self, probability = 0.001):
         if random.random() < probability:
-            if not self.avaliable_routes:
+            if not self.available_routes:
                 self.find_rotes()
             # Random choice of lane
             route_id = random.choice(self.available_routes)

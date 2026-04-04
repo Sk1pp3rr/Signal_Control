@@ -58,17 +58,19 @@ class SumoManager:
     def get_ambulance_metrics(self):
         is_ambulance=False #ustawiamy flagi
         is_ambulance_stuck=False
+        ambulance_lane=None
         #logika sprawdzenia czy mamy na mapie ambulans
         vehicle_id=traci.vehicle.getIDList() #pobieramy cala liste samochodow ktore znajduja sie na mapie
         for i in vehicle_id:
             if traci.vehicle.getTypeID(i) == "ambulance": #sprawdzamy czy sposrod aut mamy ambulans
                 is_ambulance=True #jesli tak to true
-
+                ambulance_lane = traci.vehicle.getLaneID(i)
                 # ponizej logika sprawdzenia czy ambulans stoi
-                speed=traci.vehicle.getSpeed(i) #pobieramy predkosc
-                if speed<0.5: #tutaj mozna sprawdzic czy taka predkosc bedzie git (najwyzej sie zmieni)
+                waiting_time = traci.vehicle.getWaitingTime(i)
+                if waiting_time > 5:
                     is_ambulance_stuck=True
 
                 break #jesli znalezlismy to stop
 
-        return is_ambulance, is_ambulance_stuck
+
+        return is_ambulance, is_ambulance_stuck, ambulance_lane

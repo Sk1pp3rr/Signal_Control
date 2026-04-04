@@ -9,7 +9,7 @@ from gymnasium import spaces
 import numpy as np
 import traci
 import SUMO_manager
-
+import random_events_func
 class SumoEnv(gym.Env):
     def __init__(self,
                  config_path,
@@ -19,14 +19,14 @@ class SumoEnv(gym.Env):
 
         self.current_step = 0
         self.max_steps = 500
-
+        self.event_manager = random_events_func.eventManager(self)
         self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
         #---Step 1: Observation space---
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 20
         self.observation_space = spaces.Box(
             low=0,
             high=20,
-            shape=(4,),
+            shape=(8,), #change for 8 parameters that agent get
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -46,10 +46,12 @@ class SumoEnv(gym.Env):
         self.sumo.start_sim() #Start new simulation
         self.last_action = 0
 
+        data = self.sumo.get_detector_data()  # get 4 things from detectors
 
-        obs = self.sumo.get_detector_data()
+        ambulance_location = [0, 0, 0, 0]
 
-        initial_obs = np.array(obs, dtype=np.float32)
+        initial_obs = np.array(data + ambulance_location, dtype=np.float32)
+
         return initial_obs, {}
 
     def step(self,
@@ -61,6 +63,7 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
+        self.event_manager.emergnecy_vechicle_deployment(probability=0.01) #chance for spawn ambulance
         action_changed = action != self.last_action
 
         #if there were some action performed by agent use buffor of yellow light
@@ -82,9 +85,21 @@ class SumoEnv(gym.Env):
         metrics = self.sumo.get_junction_metrics()
 
         self.last_action = action # save last action
+        data=self.sumo.get_detector_data() #get 4 things from detectors
+        is_ambulance_present, is_ambulance_stuck, ambulance_lane=self.sumo.get_ambulance_metrics()
+        ambulance_location_vector = [0, 0, 0, 0]
 
-        obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
-        reward = self._get_reward(obs,action_changed,metrics)
+        if is_ambulance_present:
+            lane_mapping = ["E3_1", "E4_1", "E5_1", "E6_1"]
+
+            if ambulance_lane in lane_mapping:
+                idx = lane_mapping.index(ambulance_lane)
+                ambulance_location_vector[idx] = 1
+
+        combined_obs=data+ambulance_location_vector
+
+        obs = np.array(combined_obs, dtype=np.float32)
+        reward = self._get_reward(obs,action_changed,metrics,is_ambulance_present, is_ambulance_stuck)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
@@ -92,7 +107,7 @@ class SumoEnv(gym.Env):
         #gymnasium requires: obs, reward, terminated, truncated, info
         return obs, reward, terminated, truncated, {}
 
-    def _get_reward(self, obs, action_changed,metrics):
+    def _get_reward(self, obs, action_changed,metrics, is_ambulance_present, is_ambulance_stuck):
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -113,6 +128,13 @@ class SumoEnv(gym.Env):
         #full reward
         reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty)
 
+        #ambulance logic
+
+        if is_ambulance_present:
+            if is_ambulance_stuck:
+                reward -=500 #this situation cannot happen, therefore is enormouse punnishment
+            else:
+                reward -=20 #we punish agent for purpose that ambulance is present (why not)
 
         return float(reward)
 
