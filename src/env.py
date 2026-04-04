@@ -26,7 +26,7 @@ class SumoEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=20,
-            shape=(4,),
+            shape=(8,),
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -48,8 +48,9 @@ class SumoEnv(gym.Env):
 
 
         obs = self.sumo.get_detector_data()
+        obs_amb=[0,0,0,0]
 
-        initial_obs = np.array(obs, dtype=np.float32)
+        initial_obs = np.array(obs+obs_amb, dtype=np.float32)
         return initial_obs, {}
 
     def step(self,
@@ -83,8 +84,20 @@ class SumoEnv(gym.Env):
 
         self.last_action = action # save last action
 
-        obs = np.array(self.sumo.get_detector_data(), dtype=np.float32)
-        reward = self._get_reward(obs,action_changed,metrics)
+        detector_data = self.sumo.get_detector_data()
+        ambulances=self.sumo.get_ambulance_metrics()
+        ambulances_vector=[0,0,0,0]
+        for karetka in ambulances:
+            detector_id=karetka[2]
+            if detector_id in self.sumo.DETECTORS:
+                idx = self.sumo.DETECTORS.index(detector_id)
+                ambulances_vector[idx] = 1
+
+        comb_obs=detector_data+ambulances_vector
+
+
+        obs = np.array(comb_obs, dtype=np.float32)
+        reward = self._get_reward(obs,action_changed,metrics, ambulances)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
@@ -92,7 +105,7 @@ class SumoEnv(gym.Env):
         #gymnasium requires: obs, reward, terminated, truncated, info
         return obs, reward, terminated, truncated, {}
 
-    def _get_reward(self, obs, action_changed,metrics):
+    def _get_reward(self, obs, action_changed,metrics,ambulances):
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -113,7 +126,11 @@ class SumoEnv(gym.Env):
         #full reward
         reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty)
 
-
+        for karetka in ambulances:
+            if karetka[1]:
+                reward-=500 #enormous punishment for staying in traffic jam
+            else:
+                reward-=20 #If ambulance spawn (why not)
         return float(reward)
 
     def close(self):
