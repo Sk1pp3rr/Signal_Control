@@ -59,7 +59,7 @@ class SumoManager:
         is_ambulance=False #ustawiamy flagi
         is_ambulance_stuck=False
         #logika sprawdzenia czy mamy na mapie ambulans
-        vehicle_id=traci.vehicle.get_IDList() #pobieramy cala liste samochodow ktore znajduja sie na mapie
+        vehicle_id=traci.vehicle.getIDList() #pobieramy cala liste samochodow ktore znajduja sie na mapie
         for i in vehicle_id:
             if traci.vehicle.getTypeID(i) == "ambulance": #sprawdzamy czy sposrod aut mamy ambulans
                 is_ambulance=True #jesli tak to true
