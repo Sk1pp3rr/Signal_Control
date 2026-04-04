@@ -56,21 +56,24 @@ class SumoManager:
 
      #funkja sprawdza czy mamy ambulans na mapie lub czy utknela w korku
     def get_ambulance_metrics(self):
-        is_ambulance=False #ustawiamy flagi
-        is_ambulance_stuck=False
-        ambulance_lane=None
-        #logika sprawdzenia czy mamy na mapie ambulans
-        vehicle_id=traci.vehicle.getIDList() #pobieramy cala liste samochodow ktore znajduja sie na mapie
+
+        vehicle_id=traci.vehicle.getIDList()
+        ambulances=[] # were prepering list for ambulances
         for i in vehicle_id:
-            if traci.vehicle.getTypeID(i) == "ambulance": #sprawdzamy czy sposrod aut mamy ambulans
-                is_ambulance=True #jesli tak to true
-                ambulance_lane = traci.vehicle.getLaneID(i)
-                # ponizej logika sprawdzenia czy ambulans stoi
-                waiting_time = traci.vehicle.getWaitingTime(i)
+            if traci.vehicle.getTypeID(i) == "ambulance":
+                is_ambulance=True
+                is_ambulance_stuck = False
+                ambulance_lane = None
+
+                waiting_time=traci.vehicle.getWaitingTime(i) #we check how long ambulance are waiting
                 if waiting_time > 5:
                     is_ambulance_stuck=True
+                for detector in self.DETECTORS:
+                    cars_in_detecor=traci.lanearea.getLastStepVehicleIDs(detector) #list of cars that are in range of detector
+                    if i in cars_in_detecor:
+                        ambulance_lane=detector
+                wektor=[is_ambulance,is_ambulance_stuck, ambulance_lane]
+                ambulances.append(wektor)
 
-                break #jesli znalezlismy to stop
 
-
-        return is_ambulance, is_ambulance_stuck, ambulance_lane
+        return ambulances
