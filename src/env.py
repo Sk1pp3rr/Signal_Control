@@ -62,6 +62,7 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
+        self.sumo.emergnecy_vechicle_deployment(probability=0.02)
         action_changed = action != self.last_action
 
         #if there were some action performed by agent use buffor of yellow light
