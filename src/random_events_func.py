@@ -1,6 +1,10 @@
 import traci
 import random
 
+from setuptools import Extension
+from sympy.codegen.fnodes import Extent
+
+
 class eventManager:
     def __init__(self, sumo_env):
         self.env = sumo_env
@@ -8,7 +12,8 @@ class eventManager:
 
     #makes list of all avaliable routes defined in simulation
     def find_rotes(self):
-        self.available_routes = traci.route.getIDList()
+        all_routes = traci.route.getIDList()
+        self.available_routes = [route for route in all_routes if not route.startswith('!')]
         return
 
     def collision(self):
@@ -36,6 +41,6 @@ class eventManager:
                 traci.vehicle.add(veh_id, route_id, typeID="ambulance")
                 traci.vehicle.setColor(veh_id, (255, 0, 0, 255))
                 print(f"Ambulance on route id: {route_id}")
-            except:
-                pass # if error ignore and pass (we shall not brake the simulation)
+            except Extension as e:
+                print(f"Error: {e}") #debugging
         return
