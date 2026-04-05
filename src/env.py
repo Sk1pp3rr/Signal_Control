@@ -9,7 +9,7 @@ from gymnasium import spaces
 import numpy as np
 import traci
 import SUMO_manager
-
+from random_events_func import eventManager
 class SumoEnv(gym.Env):
     def __init__(self,
                  config_path,
@@ -21,7 +21,9 @@ class SumoEnv(gym.Env):
         self.max_steps = 500
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
+        self.events = eventManager(self.sumo)
         #---Step 1: Observation space---
+
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 20
         self.observation_space = spaces.Box(
             low=0,
@@ -62,7 +64,7 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
-        self.sumo.emergnecy_vechicle_deployment(probability=0.02)
+        self.events.emergnecy_vechicle_deployment(probability=0.02)
         action_changed = action != self.last_action
 
         #if there were some action performed by agent use buffor of yellow light
