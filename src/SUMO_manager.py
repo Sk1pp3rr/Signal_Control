@@ -77,3 +77,16 @@ class SumoManager:
 
 
         return ambulances
+
+    # This implementation is weird because I came to conclusion that not every ambulance will come from the "city of origin" where this agent could be working
+    # sooo the agent can get the data both ways, not to neglect the existence of ambulances not integrated with the system.
+    def get_ambulance_presence(self):
+        """Returns vector [0,0,0,0] with 1, in place where there is ambulance (GPS or Sensor)"""
+        presence=[0,0,0,0]
+        for idx, det_id in enumerate(self.DETECTORS):
+            vehicle_on_det = traci.lanearea.getLastStepVehicleIDs(det_id)
+            for veh_id in vehicle_on_det:
+                if traci.vehicle.getTypeID(veh_id) == "ambulance":
+                    presence[idx] = 1
+                    break
+        return presence

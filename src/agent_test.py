@@ -8,7 +8,7 @@ def test_trained_agent():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     #MODEL_PATH = os.path.dirname(os.path.join(BASE_DIR, "..","results","ppo_sumo_model_100000_steps.zip"))
     CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-    MODEL_PATH = os.path.join(BASE_DIR, "model_krzyzak_v3.zip")
+    MODEL_PATH = os.path.join(BASE_DIR, "ppo_sumo_model_120000_steps.zip")
 
     # 2. Init from GUI
     # gui=True, to watch the agent

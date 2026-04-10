@@ -24,11 +24,11 @@ class SumoEnv(gym.Env):
         self.events = eventManager(self.sumo)
         #---Step 1: Observation space---
 
-        #In krzyzak, we have four detectors, every one of them is giving number from 0 to 20
+        #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
         self.observation_space = spaces.Box(
             low=0,
-            high=20,
-            shape=(8,),
+            high=100,
+            shape=(8,), #4 place for cars and 4 for ambulances
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -42,7 +42,6 @@ class SumoEnv(gym.Env):
               seed=None,
               options = None
               ):
-        #TODO: restart of SUMO env for nest trial
         self.current_step = 0
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
@@ -58,57 +57,73 @@ class SumoEnv(gym.Env):
     def step(self,
              action #action performed by Agent
              ):
-        #TODO: Definition of step 3 and 4 (action->Time->Reward)
         #1.Perform action
-        #2.Move forward in time eg. 5s
+        #2.Move forward in time e.g. 5s
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
-        self.events.emergnecy_vechicle_deployment(probability=0.1)
+        #Spawn of ambulance at the beginning of the step
+        self.events.emergnecy_vechicle_deployment(probability=0.01)
+
         action_changed = action != self.last_action
 
         #if there were some action performed by agent use buffor of yellow light
-        if action != self.last_action:
+        if action_changed:
             yellow_phase = 1 if self.last_action == 0 else 3
             self.sumo.set_traffic_light_phase("J6", yellow_phase)
             #skip for 3 minutes
-            for _ in range(30):
+            for _ in range(30): #3 sec for yellow
                 traci.simulationStep()
+
         #phase switch
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
-
-
+        amb_penalty_accumulator = 0
         for _ in range(50):
             traci.simulationStep() # jump in time
 
-        metrics = self.sumo.get_junction_metrics()
+            #TODO: Implement code below as function (clean coding!!!)
+            #huge priority for ambulance/emergency vehicle
+            amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
+
+            for idx, is_amb in enumerate(amb_presence):
+                if is_amb:
+                    # Check red for ambulance
+                    is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
+                    if not is_green:
+                        # Small but constant penalty max -500 for step
+                        amb_penalty_accumulator += 10
+
 
         self.last_action = action # save last action
 
         detector_data = self.sumo.get_detector_data()
-        ambulances=self.sumo.get_ambulance_metrics()
-        ambulances_vector=[0,0,0,0]
-        for karetka in ambulances:
-            detector_id=karetka[2]
-            if detector_id in self.sumo.DETECTORS:
-                idx = self.sumo.DETECTORS.index(detector_id)
-                ambulances_vector[idx] = 1
+        ambulances=self.sumo.get_ambulance_presence()
 
-        comb_obs=detector_data+ambulances_vector
+        comb_obs = np.concatenate([detector_data,ambulances]).astype(np.float32)
+        # ambulances_vector=[0,0,0,0]
+        # for karetka in ambulances:
+        #     detector_id=karetka[2]
+        #     if detector_id in self.sumo.DETECTORS:
+        #         idx = self.sumo.DETECTORS.index(detector_id)
+        #         ambulances_vector[idx] = 1
+        #
+        # comb_obs=detector_data+ambulances_vector
 
 
-        obs = np.array(comb_obs, dtype=np.float32)
-        reward = self._get_reward(obs,action_changed,metrics, ambulances)
+        #obs = np.array(comb_obs, dtype=np.float32)
+
+        metrics = self.sumo.get_junction_metrics()
+        reward = self._get_reward(metrics, action_changed, amb_penalty_accumulator)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
 
         #gymnasium requires: obs, reward, terminated, truncated, info
-        return obs, reward, terminated, truncated, {}
+        return comb_obs, reward, terminated, truncated, {}
 
-    def _get_reward(self, obs, action_changed,metrics,ambulances):
+    def _get_reward(self,metrics, action_changed, amb_penalty):
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -127,13 +142,16 @@ class SumoEnv(gym.Env):
         switch_penalty = 1.0 if action_changed else 0.0
 
         #full reward
-        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty)
+        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty + amb_penalty)
 
-        for karetka in ambulances:
-            if karetka[1]:
-                reward-=500 #enormous punishment for staying in traffic jam
-            else:
-                reward-=20 #If ambulance spawn (why not)
+
+        # for karetka in ambulances:
+        #     if karetka[1]:
+        #         reward-=500 #enormous punishment for staying in traffic jam
+        #     else:
+        #         reward-=20 #If ambulance spawn (why not)
+
+
         return float(reward)
 
     def close(self):
