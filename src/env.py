@@ -79,21 +79,22 @@ class SumoEnv(gym.Env):
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
-        amb_penalty_accumulator = 0
-        for _ in range(50):
-            traci.simulationStep() # jump in time
+        amb_penalty_accumulator = self.simulate_and_get_ambulance_penalty(action, num_steps=50) #
 
-            #TODO: Implement code below as function (clean coding!!!)
+        #for _ in range(50):
+         #   traci.simulationStep() # jump in time
+
+            #TODO: Implement code below as function (clean coding!!!) DONE
             #huge priority for ambulance/emergency vehicle
-            amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
+          #  amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
 
-            for idx, is_amb in enumerate(amb_presence):
-                if is_amb:
-                    # Check red for ambulance
-                    is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
-                    if not is_green:
-                        # Small but constant penalty max -500 for step
-                        amb_penalty_accumulator += 10
+            #for idx, is_amb in enumerate(amb_presence):
+             #   if is_amb:
+              #      # Check red for ambulance
+               #     is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
+                #    if not is_green:
+                 #       # Small but constant penalty max -500 for step
+                  #      amb_penalty_accumulator += 10
 
 
         self.last_action = action # save last action
@@ -158,3 +159,21 @@ class SumoEnv(gym.Env):
         #cleaning
         if traci.isLoaded():
             traci.close()
+
+    def simulate_and_get_ambulance_penalty(self, action, num_steps=50):
+        # same code as function
+        amb_penalty_accumulator = 0
+
+        for _ in range(num_steps):
+            traci.simulationStep()
+
+            amb_presence = self.sumo.get_ambulance_presence()
+
+            for idx, is_amb in enumerate(amb_presence):
+                if is_amb:
+                    is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
+
+                    if not is_green:
+                        amb_penalty_accumulator += 10
+
+        return amb_penalty_accumulator
