@@ -93,7 +93,7 @@ class SumoEnv(gym.Env):
 
         detector_status = self.events.detector_status
 
-        detector_data = self.is_detector_working(self.events.detector_status)
+        detector_data = self.is_detector_working(detector_status)
 
         ambulances=self.sumo.get_ambulance_presence()
 
