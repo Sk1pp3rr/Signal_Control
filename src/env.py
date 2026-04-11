@@ -28,7 +28,7 @@ class SumoEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=100,
-            shape=(8,), #4 place for cars and 4 for ambulances
+            shape=(12,), #4 place for cars and 4 for ambulances and 4 detectors
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -50,8 +50,10 @@ class SumoEnv(gym.Env):
 
         obs = self.sumo.get_detector_data()
         obs_amb=[0,0,0,0]
+        self.events.detector_status=[1,1,1,1]
+        det=self.events.detector_status
 
-        initial_obs = np.array(obs+obs_amb, dtype=np.float32)
+        initial_obs = np.array(obs+obs_amb+det, dtype=np.float32)
         return initial_obs, {}
 
     def step(self,
@@ -64,6 +66,8 @@ class SumoEnv(gym.Env):
         self.current_step += 1
         #Spawn of ambulance at the beginning of the step
         self.events.emergnecy_vechicle_deployment(probability=0.01)
+
+
 
         action_changed = action != self.last_action
 
@@ -81,39 +85,19 @@ class SumoEnv(gym.Env):
 
         amb_penalty_accumulator = self.simulate_and_get_ambulance_penalty(action, num_steps=50) #
 
-        #for _ in range(50):
-         #   traci.simulationStep() # jump in time
-
-            #TODO: Implement code below as function (clean coding!!!) DONE
-            #huge priority for ambulance/emergency vehicle
-          #  amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
-
-            #for idx, is_amb in enumerate(amb_presence):
-             #   if is_amb:
-              #      # Check red for ambulance
-               #     is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
-                #    if not is_green:
-                 #       # Small but constant penalty max -500 for step
-                  #      amb_penalty_accumulator += 10
 
 
         self.last_action = action # save last action
 
-        detector_data = self.sumo.get_detector_data()
+        self.events.detector_malfunction()  #
+
+        detector_status = self.events.detector_status
+
+        detector_data = self.is_detector_working(self.events.detector_status)
+
         ambulances=self.sumo.get_ambulance_presence()
 
-        comb_obs = np.concatenate([detector_data,ambulances]).astype(np.float32)
-        # ambulances_vector=[0,0,0,0]
-        # for karetka in ambulances:
-        #     detector_id=karetka[2]
-        #     if detector_id in self.sumo.DETECTORS:
-        #         idx = self.sumo.DETECTORS.index(detector_id)
-        #         ambulances_vector[idx] = 1
-        #
-        # comb_obs=detector_data+ambulances_vector
-
-
-        #obs = np.array(comb_obs, dtype=np.float32)
+        comb_obs = np.concatenate([detector_data,ambulances, detector_status]).astype(np.float32)
 
         metrics = self.sumo.get_junction_metrics()
         reward = self._get_reward(metrics, action_changed, amb_penalty_accumulator)
@@ -146,11 +130,7 @@ class SumoEnv(gym.Env):
         reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty + amb_penalty)
 
 
-        # for karetka in ambulances:
-        #     if karetka[1]:
-        #         reward-=500 #enormous punishment for staying in traffic jam
-        #     else:
-        #         reward-=20 #If ambulance spawn (why not)
+
 
 
         return float(reward)
@@ -177,3 +157,18 @@ class SumoEnv(gym.Env):
                         amb_penalty_accumulator += 10
 
         return amb_penalty_accumulator
+
+    def is_detector_working(self, detector_status):
+        raw_detector_data = self.sumo.get_detector_data()
+        detector_data=[]
+        for i in range(len(detector_status)):
+            if detector_status[i] == 1:
+                detector_data.append(raw_detector_data[i])
+            else:
+                detector_data.append(0)
+
+        return detector_data
+
+
+
+
