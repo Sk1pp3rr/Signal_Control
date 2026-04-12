@@ -39,6 +39,7 @@
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <route id="route_NS" edges="-E4 -E3"/> <route id="route_SN" edges="E3 E4"/>   <route id="route_WE" edges="-E6 E5"/>  <route id="route_EW" edges="-E5 E6"/>
     <vType id="car_standard" length="4.70" minGap="2.50" probability="0.70" vClass="passenger" guiShape="passenger" color="white" accel="2.6" decel="4.5" sigma="0.5" tau="1.0"/>
     <vehicle id="0" type="car_standard" depart="0.00">
         <route edges="-E6 -E3"/>
@@ -2202,4 +2203,5 @@
     <vehicle id="719" type="car_aggressive" depart="3595.00">
         <route edges="-E4 E6"/>
     </vehicle>
+
 </routes>

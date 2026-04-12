@@ -28,7 +28,7 @@ class SumoEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=100,
-            shape=(8,), #4 place for cars and 4 for ambulances
+            shape=(12,), #4 place for cars and 4 for ambulances and 4 for buses
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -64,6 +64,13 @@ class SumoEnv(gym.Env):
         self.current_step += 1
         #Spawn of ambulance at the beginning of the step
         self.events.emergnecy_vechicle_deployment(probability=0.01)
+        # A: North -> South
+        self.events.scheduled_bus_deployment(self.current_step, "route_NS",stops=["busStop_J6_South"],line_name = "101_A", interval_steps= 150)
+        # B: South -> North (stop on North stop)
+        self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN", stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
+
+        #line 102 East_west
+        self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE", stops=["busStop_J6_West", "busStop_J6_East"],line_name="102", interval_steps=200)
 
         action_changed = action != self.last_action
 
@@ -84,7 +91,6 @@ class SumoEnv(gym.Env):
         #for _ in range(50):
          #   traci.simulationStep() # jump in time
 
-            #TODO: Implement code below as function (clean coding!!!) DONE
             #huge priority for ambulance/emergency vehicle
           #  amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
 
@@ -100,9 +106,10 @@ class SumoEnv(gym.Env):
         self.last_action = action # save last action
 
         detector_data = self.sumo.get_detector_data()
-        ambulances=self.sumo.get_ambulance_presence()
+        ambulances=self.sumo.get_veh_presence(veh_type="ambulance")
+        buses = self.sumo.get_veh_presence(veh_type="city_bus")
 
-        comb_obs = np.concatenate([detector_data,ambulances]).astype(np.float32)
+        comb_obs = np.concatenate([detector_data,ambulances,buses]).astype(np.float32)
         # ambulances_vector=[0,0,0,0]
         # for karetka in ambulances:
         #     detector_id=karetka[2]
@@ -116,7 +123,7 @@ class SumoEnv(gym.Env):
         #obs = np.array(comb_obs, dtype=np.float32)
 
         metrics = self.sumo.get_junction_metrics()
-        reward = self._get_reward(metrics, action_changed, amb_penalty_accumulator)
+        reward = self._get_reward(metrics, action_changed, amb_penalty_accumulator, buses)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
@@ -124,7 +131,8 @@ class SumoEnv(gym.Env):
         #gymnasium requires: obs, reward, terminated, truncated, info
         return comb_obs, reward, terminated, truncated, {}
 
-    def _get_reward(self,metrics, action_changed, amb_penalty):
+    #TODO: Implementation of reward for buses and everything with it
+    def _get_reward(self,metrics, action_changed, amb_penalty, buses):
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -167,7 +175,7 @@ class SumoEnv(gym.Env):
         for _ in range(num_steps):
             traci.simulationStep()
 
-            amb_presence = self.sumo.get_ambulance_presence()
+            amb_presence = self.sumo.get_veh_presence("ambulance")
 
             for idx, is_amb in enumerate(amb_presence):
                 if is_amb:

@@ -20,6 +20,8 @@
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+        <route id="route_NS" edges="-E4 -E3"/> <route id="route_SN" edges="E3 E4"/>   <route id="route_WE" edges="-E6 E5"/>  <route id="route_EW" edges="-E5 E6"/>
+
     <route id="route_N_S" edges="-E6 -E3"/>
     <route id="route_N_E" edges="-E6 E5"/>
     <route id="route_N_W" edges="-E6 E4"/>
