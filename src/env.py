@@ -48,11 +48,12 @@ class SumoEnv(gym.Env):
         self.last_action = 0
 
 
-        obs = self.sumo.get_detector_data()
-        obs_amb=[0,0,0,0]
+        detector_data = self.sumo.get_detector_data()
+        ambulances = self.sumo.get_veh_presence("ambulance")
+        buses = self.sumo.get_veh_presence("city_bus")
 
-        initial_obs = np.array(obs+obs_amb, dtype=np.float32)
-        return initial_obs, {}
+        obs = np.concatenate([detector_data,ambulances,buses]).astype(np.float32)
+        return obs, {}
 
     def step(self,
              action #action performed by Agent
@@ -62,17 +63,19 @@ class SumoEnv(gym.Env):
         #3.Fetch new data from detectors
         #4.Get the reward
         self.current_step += 1
+        action_changed = action != self.last_action
+
         #Spawn of ambulance at the beginning of the step
         self.events.emergnecy_vechicle_deployment(probability=0.01)
-        # A: North -> South
+        #buses
         self.events.scheduled_bus_deployment(self.current_step, "route_NS",stops=["busStop_J6_South"],line_name = "101_A", interval_steps= 150)
-        # B: South -> North (stop on North stop)
         self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN", stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
-
-        #line 102 East_west
         self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE", stops=["busStop_J6_West", "busStop_J6_East"],line_name="102", interval_steps=200)
 
-        action_changed = action != self.last_action
+
+
+        #acumulator of priority penalties/rewards
+        accumulated_priority_penalty = 0.0
 
         #if there were some action performed by agent use buffor of yellow light
         if action_changed:
@@ -81,49 +84,29 @@ class SumoEnv(gym.Env):
             #skip for 3 minutes
             for _ in range(30): #3 sec for yellow
                 traci.simulationStep()
+                accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
         #phase switch
         phase = 0 if action == 0 else 2
         self.sumo.set_traffic_light_phase("J6", phase)
 
-        amb_penalty_accumulator = self.simulate_and_get_ambulance_penalty(action, num_steps=50) #
-
-        #for _ in range(50):
-         #   traci.simulationStep() # jump in time
-
-            #huge priority for ambulance/emergency vehicle
-          #  amb_presence = self.sumo.get_ambulance_presence() #checking in every "small" step if there is emergency vehicle
-
-            #for idx, is_amb in enumerate(amb_presence):
-             #   if is_amb:
-              #      # Check red for ambulance
-               #     is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
-                #    if not is_green:
-                 #       # Small but constant penalty max -500 for step
-                  #      amb_penalty_accumulator += 10
-
+        for _ in range(50):
+            traci.simulationStep()
+            accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
         self.last_action = action # save last action
 
         detector_data = self.sumo.get_detector_data()
         ambulances=self.sumo.get_veh_presence(veh_type="ambulance")
         buses = self.sumo.get_veh_presence(veh_type="city_bus")
+        metrics = self.sumo.get_junction_metrics()
+
+        passing_bonus = self.sumo.get_gps_status()
 
         comb_obs = np.concatenate([detector_data,ambulances,buses]).astype(np.float32)
-        # ambulances_vector=[0,0,0,0]
-        # for karetka in ambulances:
-        #     detector_id=karetka[2]
-        #     if detector_id in self.sumo.DETECTORS:
-        #         idx = self.sumo.DETECTORS.index(detector_id)
-        #         ambulances_vector[idx] = 1
-        #
-        # comb_obs=detector_data+ambulances_vector
 
 
-        #obs = np.array(comb_obs, dtype=np.float32)
-
-        metrics = self.sumo.get_junction_metrics()
-        reward = self._get_reward(metrics, action_changed, amb_penalty_accumulator, buses)
+        reward = self._get_reward(metrics, action_changed, accumulated_priority_penalty, passing_bonus)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
@@ -131,35 +114,52 @@ class SumoEnv(gym.Env):
         #gymnasium requires: obs, reward, terminated, truncated, info
         return comb_obs, reward, terminated, truncated, {}
 
+
+    def _calculate_instant_priority_penalty(self, current_action):
+        """Penalty for every step in Simulation"""
+        penalty = 0.0
+        amb_presence = self.sumo.get_veh_presence("ambulance")
+        bus_presence = self.sumo.get_veh_presence("city_bus")
+
+        for idx in range(4):
+            # Check if there is red in the intake of the junction
+            is_red = not ((idx < 2 and current_action == 0) or (idx >= 2 and current_action == 1))
+            if is_red:
+                if amb_presence[idx]:
+                    penalty -= 2.0
+                if bus_presence[idx]:
+                    penalty -= 0.6
+        return penalty
+
     #TODO: Implementation of reward for buses and everything with it
-    def _get_reward(self,metrics, action_changed, amb_penalty, buses):
+    def _get_reward(self,metrics, action_changed, priority_penalty, passing_bonus):
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
         oc = 0.5
+        pp = 1.0
+        pr = 1.0
+        pb = 1.0
 
         #num of cars in queue
         halt_penalty = metrics['total_halting']
         occ_penalty = metrics['occupancy']
         jam_penalty = metrics['max_jam_length']
 
-        #waiting time for all detectors
-        # waiting_times = self.sumo.get_waiting_time_data()
-        # waiting_penalty = np.sum(waiting_times)
-
         #switching penalty to avoid DISCO
-        switch_penalty = 1.0 if action_changed else 0.0
+        switch_penalty = 2.0 if action_changed else 0.0
+        prior_reward = 0
+        # rewards for smooth passage
+        passed = self.sumo.get_gps_status()
+        for vehicle in passed:
+            if vehicle['wait'] < 1.0:
+                if vehicle['type'] == "ambulance":
+                    prior_reward += 20
+                elif vehicle['type'] == "city_bus":
+                    prior_reward += 10
 
-        #full reward
-        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty + amb_penalty)
-
-
-        # for karetka in ambulances:
-        #     if karetka[1]:
-        #         reward-=500 #enormous punishment for staying in traffic jam
-        #     else:
-        #         reward-=20 #If ambulance spawn (why not)
-
+        #full penalty
+        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty ) + pp * priority_penalty + pr * prior_reward
 
         return float(reward)
 

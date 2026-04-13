@@ -91,3 +91,20 @@ class SumoManager:
                     break
         return presence
 
+    def get_gps_status(self):
+        """Simulates GPS data, return list od vehicles witch could be connected to the city network (potentially gps e.g. emergency and city_buses)
+        witch left the simulation or rode through the junction (left the edges)"""
+
+        passed_priority = []
+
+        exit_edges = ["E3","E4","E5","E6"]
+
+        for edge_id in exit_edges:
+            # get all the car's id on intake edges
+            vehicles = traci.edge.getLastStepVehicleIDs(edge_id)
+            for v_id in vehicles:
+                if traci.vehicle.getDistance(v_id) < 10.0:
+                    v_type = traci.vehicle.getTypeID(v_id)
+                    if v_type in ["ambulance","city_bus","police","fire_truck"]:
+                        passed_priority.append({'type': v_type, 'wait': traci.vehicle.getWaitingTime(v_id)})
+        return passed_priority

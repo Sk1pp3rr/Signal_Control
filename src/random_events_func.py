@@ -27,7 +27,7 @@ class eventManager:
     def spawn_dynamic_traffic(self, current_step, route_id):
         phase = self.get_time_phase(current_step)
 
-        # Probablity of car spawn dependent on hour
+        # Probability of car spawn dependent on hour
         probs = {
             0: 0.005,
             1: 0.05,
@@ -87,7 +87,7 @@ class eventManager:
     def scheduled_bus_deployment(self, current_step, route_id,stops = None, line_name="101", interval_steps=100):
         """
         It leaves bus in fixed time stamps on track, and gives them stops
-        interval_steps=100 is aprox. 8-9 with step duration 5s. We have it 5 or 8, 8 when it changes phases
+        interval_steps=100 is approx. 8-9 with step duration 5s. We have it 5 or 8, 8 when it changes phases
         """
         # Check if there is time to deploy the bus
         if current_step % interval_steps == 0 and current_step > 0:
