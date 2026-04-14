@@ -1,7 +1,7 @@
 <configuration>
     <input>
         <net-file value="krzyzak.net.xml"/>
-    	<route-files value="lightMap.rou.xml"/>
+    	<route-files value="test_routes.rou.xml"/>
     	<additional-files value="mapaWithBuses.add.xml,vehType\urban_drivers.add.xml"/>
     </input>
 

@@ -13,7 +13,7 @@
                length="4.2" minGap="2.0" color="0,255,0" guiShape="passenger/sedan" probability="0.07"/>
 
         <vType id="taxi" vClass="taxi" accel="2.8" decel="5.0" tau="1.0"
-               length="4.8" color="black" guiShape="passenger/sedan" probability="0.02"/>
+               length="4.8" color="gray" guiShape="passenger/sedan" probability="0.02"/>
 
         <vType id="delivery_van" vClass="delivery" accel="2.0" decel="4.5" length="6.5"
                color="orange" guiShape="delivery" probability="0.01"/>
