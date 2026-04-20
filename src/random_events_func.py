@@ -9,6 +9,7 @@ class eventManager:
     def __init__(self, sumo_env):
         self.env = sumo_env
         self.available_routes = []
+        self.detector_status = [1,1,1,1] #is detector working 1->yes , 0->no la policiaaa :(
 
 
     """Added two functions for further training like if we would like to train this agent on the base of the whole day with it's own phases
@@ -63,8 +64,13 @@ class eventManager:
         traci.lane.setDisallowed(target_lane, ["passenger", "bus", "truck"])
         return
 
-    def detector_malfunction(self):
+    def detector_malfunction(self, probability=0.002):
         #TODO: implementation of detector error, maybe dependent on detector type. If so implement different function and call them here
+        detectors = self.env.DETECTORS
+        prawd=random.random() #chose  number between (0,1)
+        if prawd < probability:
+            random_idx = random.randint(0, len(detectors)-1)
+            self.detector_status[random_idx]=0
         return
 
     def emergnecy_vechicle_deployment(self, probability = 0.001):
