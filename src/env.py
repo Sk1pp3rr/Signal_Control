@@ -28,7 +28,7 @@ class SumoEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=100,
-            shape=(12,), #4 place for cars and 4 for ambulances and 4 for buses
+            shape=(16,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -171,7 +171,7 @@ class SumoEnv(gym.Env):
         buses = self.sumo.get_veh_presence(veh_type="city_bus")
 
         # vector
-        return np.concatenate([masked_data, ambulances, buses]).astype(np.float32)
+        return np.concatenate([masked_data, ambulances, buses, status]).astype(np.float32)
 
     def close(self):
         #cleaning
