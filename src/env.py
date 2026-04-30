@@ -52,8 +52,8 @@ class SumoEnv(gym.Env):
         ambulances = self.sumo.get_veh_presence("ambulance")
         buses = self.sumo.get_veh_presence("city_bus")
 
-        obs = np.concatenate([detector_data,ambulances,buses]).astype(np.float32)
-        return obs, {}
+        self.events.detector_status = [1, 1, 1, 1]
+        return self._get_observation(), {}
 
     def step(self,
              action #action performed by Agent
@@ -72,7 +72,7 @@ class SumoEnv(gym.Env):
         self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN", stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
         self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE", stops=["busStop_J6_West", "busStop_J6_East"],line_name="102", interval_steps=200)
 
-
+        self.events.detector_malfunction()
 
         #acumulator of priority penalties/rewards
         accumulated_priority_penalty = 0.0
@@ -95,15 +95,10 @@ class SumoEnv(gym.Env):
             accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
         self.last_action = action # save last action
-
-        detector_data = self.sumo.get_detector_data()
-        ambulances=self.sumo.get_veh_presence(veh_type="ambulance")
-        buses = self.sumo.get_veh_presence(veh_type="city_bus")
+        comb_obs = self._get_observation()
         metrics = self.sumo.get_junction_metrics()
 
         passing_bonus = self.sumo.get_gps_status()
-
-        comb_obs = np.concatenate([detector_data,ambulances,buses]).astype(np.float32)
 
 
         reward = self._get_reward(metrics, action_changed, accumulated_priority_penalty, passing_bonus)
@@ -162,6 +157,21 @@ class SumoEnv(gym.Env):
         reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty ) + pp * priority_penalty + pr * prior_reward
 
         return float(reward)
+
+    def _get_observation(self):
+        # Status 0 or 1
+        status = self.events.detector_status
+        raw_data = self.sumo.get_detector_data()
+
+        # if status[i] == 0, put 0 masking
+        masked_data = [raw_data[i] if status[i] == 1 else 0 for i in range(4)]
+
+        #Rest od the sim
+        ambulances = self.sumo.get_veh_presence(veh_type="ambulance")
+        buses = self.sumo.get_veh_presence(veh_type="city_bus")
+
+        # vector
+        return np.concatenate([masked_data, ambulances, buses]).astype(np.float32)
 
     def close(self):
         #cleaning

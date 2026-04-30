@@ -14,6 +14,9 @@ def run_sanity_test():
         for i in range(500):
             action = env.action_space.sample() #random choice from 0 to 1
             obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
+                print(f"Koniec symulacji w kroku {i + 1} (Terminated: {terminated}, Truncated: {truncated})")
+                break
             print(f"Step {i+1}: {action}, reward: {reward}, terminated: {terminated}, observation: {obs}")
 
         print("succes!")
