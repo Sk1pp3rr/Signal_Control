@@ -108,3 +108,18 @@ class SumoManager:
                     if v_type in ["ambulance","city_bus","police","fire_truck"]:
                         passed_priority.append({'type': v_type, 'wait': traci.vehicle.getWaitingTime(v_id)})
         return passed_priority
+
+    def get_pedestrian_presence(self):
+        """Simulation of pedestrians buttons on crosswalks, return if they are any pedestrians on the edges"""
+        ped_edges = ["-E4", "E3", "-E5", "-E6"]
+        presence = []
+
+        for edge in ped_edges:
+            # Check if there is more than 0 persons on the edge
+            person_ids = traci.edge.getLastStepPersonIDs(edge)
+            if len(person_ids) > 0:
+                presence.append(1.0)  # Button pressed
+            else:
+                presence.append(0.0)
+
+        return presence

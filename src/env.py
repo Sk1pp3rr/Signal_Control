@@ -28,7 +28,7 @@ class SumoEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=100,
-            shape=(16,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status
+            shape=(20,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians
             dtype=np.float32
         ) # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -74,20 +74,25 @@ class SumoEnv(gym.Env):
 
         self.events.detector_malfunction()
 
-        #acumulator of priority penalties/rewards
+        #accumulator of priority penalties/rewards
         accumulated_priority_penalty = 0.0
 
-        #if there were some action performed by agent use buffor of yellow light
+        #if there were some action performed by agent use buffer of yellow light
         if action_changed:
-            yellow_phase = 1 if self.last_action == 0 else 3
+            clearing_phase = 1 if self.last_action == 0 else 4
+            self.sumo.set_traffic_light_phase("J6", clearing_phase)
+            for _ in range(20):  # 2s clearance
+                traci.simulationStep()
+                accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
+
+            yellow_phase = 2 if self.last_action == 0 else 5
             self.sumo.set_traffic_light_phase("J6", yellow_phase)
-            #skip for 3 minutes
             for _ in range(30): #3 sec for yellow
                 traci.simulationStep()
                 accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
         #phase switch
-        phase = 0 if action == 0 else 2
+        phase = 0 if action == 0 else 3
         self.sumo.set_traffic_light_phase("J6", phase)
 
         for _ in range(50):
@@ -135,11 +140,13 @@ class SumoEnv(gym.Env):
         pp = 1.0
         pr = 1.0
         pb = 1.0
+        ps = 0.7
 
         #num of cars in queue
         halt_penalty = metrics['total_halting']
         occ_penalty = metrics['occupancy']
         jam_penalty = metrics['max_jam_length']
+        ped_penalty = self.calculate_ped_penalty()
 
         #switching penalty to avoid DISCO
         switch_penalty = 2.0 if action_changed else 0.0
@@ -154,7 +161,7 @@ class SumoEnv(gym.Env):
                     prior_reward += 10
 
         #full penalty
-        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty ) + pp * priority_penalty + pr * prior_reward
+        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty) + pp * priority_penalty + pr * prior_reward + ped_penalty * ps
 
         return float(reward)
 
@@ -169,9 +176,10 @@ class SumoEnv(gym.Env):
         #Rest od the sim
         ambulances = self.sumo.get_veh_presence(veh_type="ambulance")
         buses = self.sumo.get_veh_presence(veh_type="city_bus")
+        pedestrians = self.sumo.get_pedestrian_presence()
 
         # vector
-        return np.concatenate([masked_data, ambulances, buses, status]).astype(np.float32)
+        return np.concatenate([masked_data, ambulances, buses, status, pedestrians]).astype(np.float32)
 
     def close(self):
         #cleaning
@@ -195,3 +203,16 @@ class SumoEnv(gym.Env):
                         amb_penalty_accumulator += 10
 
         return amb_penalty_accumulator
+
+    def calculate_ped_penalty(self):
+        ped_presence = self.sumo.get_pedestrian_presence()
+        ped_penalty_accumulator = 0
+
+        for idx, is_waiting in enumerate(ped_presence):
+            if is_waiting:
+                # Check if ped have red
+                is_red_for_ped = ((idx < 2 and self.last_action == 0) or
+                                  (idx >= 2 and self.last_action == 1))
+                if is_red_for_ped:
+                    ped_penalty_accumulator -= 1.0
+        return ped_penalty_accumulator
