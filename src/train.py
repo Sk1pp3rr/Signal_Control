@@ -25,7 +25,7 @@ def train():
     # 3. Start
     print("Start training...")
     try:
-        model.learn(total_timesteps=200000, callback=checkpoint_callback)
+        model.learn(total_timesteps=1000000, callback=checkpoint_callback)
     except KeyboardInterrupt:
         print("Training interrupted by user")
 

@@ -10,11 +10,13 @@ class eventManager:
         self.env = sumo_env
         self.available_routes = []
         self.detector_status = [1,1,1,1] #is detector working 1->yes , 0->no la policiaaa :(
-
+        from collections import deque
+        self.history_window = 100
+        self.detector_history = [deque(maxlen = self.history_window) for _ in range(4)]
 
     """Added two functions for further training like if we would like to train this agent on the base of the whole day with it's own phases
     for further reality"""
-    def get_time(self,current_step):
+    def get_time_phase(self,current_step):
         hour_step = 720
         day_time = current_step % (24 * hour_step)
 
@@ -47,24 +49,27 @@ class eventManager:
         if phase == 1 and random.random() < 0.03:
             traci.vehicle.add(f"truck_{current_step}", route_id, typeID="heavy_truck")
 
-
+    def get_normalized_time(self, current_step):
+        # assuming 1 step = 5s 24h = 17280 steps
+        day_steps = 17280
+        return (current_step % day_steps) / day_steps
 
 
     #makes list of all avaliable routes defined in simulation
-    def find_rotes(self):
+    def find_routes(self):
         all_routes = traci.route.getIDList()
         self.available_routes = [route for route in all_routes if not route.startswith('!')]
         return
 
     def collision(self):
-        if not self.avaliable_routes:
-            self.find_rotes()
+        if not self.available_routes:
+            self.find_routes()
         # Random choice of lane
         target_lane = random.choice(self.available_routes)
         traci.lane.setDisallowed(target_lane, ["passenger", "bus", "truck"])
         return
 
-    def detector_malfunction(self, probability=0.002, repair_probability=0.01):
+    def detector_malfunction(self, probability=0.0005, repair_probability=0.01):
         for i in range(len(self.detector_status)):
             if self.detector_status[i] == 1:
                 # If detector is working, check if it will be broken
@@ -80,7 +85,7 @@ class eventManager:
     def emergnecy_vechicle_deployment(self, probability = 0.001):
         if random.random() < probability:
             if not self.available_routes:
-                self.find_rotes()
+                self.find_routes()
             # Random choice of lane
             route_id = random.choice(self.available_routes)
             veh_id = f"emergency_{traci.simulation.getTime()}"

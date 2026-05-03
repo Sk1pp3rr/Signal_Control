@@ -1,7 +1,7 @@
 import pandas as pd
 from tbparse import SummaryReader
 
-log_dir = "ppo_sumo_tensorboard/"
+log_dir = "ppo_sumo_tensorboard/PPO_32"
 reader = SummaryReader(log_dir, pivot=True)
 df = reader.scalars
 

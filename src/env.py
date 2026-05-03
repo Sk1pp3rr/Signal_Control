@@ -10,6 +10,8 @@ import numpy as np
 import traci
 import SUMO_manager
 from random_events_func import eventManager
+from collections import deque
+
 class SumoEnv(gym.Env):
     def __init__(self,
                  config_path,
@@ -19,9 +21,13 @@ class SumoEnv(gym.Env):
 
         self.current_step = 0
         self.max_steps = 500
+        self._sim_step = 0.1
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
+
+        self.history_window = 100 #history of the last 100 correct readings
+        self.detector_history = [deque(maxlen=self.history_window) for _ in range(4)]
         #---Step 1: Observation space---
 
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
@@ -37,6 +43,17 @@ class SumoEnv(gym.Env):
         self.last_action = 0 # last action performed by agent
         self.config_path = config_path
         self.gui = gui
+
+        self.YELLOW_DUR = 3
+        self.ALLRED_DUR = 3
+        self.GREEN_DUR = 5
+
+        self.PHASE_NS_GREEN = 0  # gGrrgGrrrGrG  32s
+        self.PHASE_NS_YELLOW = 1  # yyrryyrrrrrrr  3s
+        self.PHASE_ALL_RED_A = 2  # rrrrrrrrrrrr   2s  (bufor po NS)
+        self.PHASE_WE_GREEN = 3  # rrgGrrrGGrGr  32s
+        self.PHASE_WE_YELLOW = 4  # rryyrryyrrrr   3s
+        self.PHASE_ALL_RED_B = 5  # rrrrrrrrrrrr   2s  (bufor po WE)
 
     def reset(self,
               seed=None,
@@ -55,65 +72,85 @@ class SumoEnv(gym.Env):
         self.events.detector_status = [1, 1, 1, 1]
         return self._get_observation(), {}
 
-    def step(self,
-             action #action performed by Agent
-             ):
-        #1.Perform action
-        #2.Move forward in time e.g. 5s
-        #3.Fetch new data from detectors
-        #4.Get the reward
+    def step(self, action):
         self.current_step += 1
         action_changed = action != self.last_action
 
-        #Spawn of ambulance at the beginning of the step
+        # Spawny eventów — bez zmian
         self.events.emergnecy_vechicle_deployment(probability=0.01)
-        #buses
-        self.events.scheduled_bus_deployment(self.current_step, "route_NS",stops=["busStop_J6_South"],line_name = "101_A", interval_steps= 150)
-        self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN", stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
-        self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE", stops=["busStop_J6_West", "busStop_J6_East"],line_name="102", interval_steps=200)
+        self.events.scheduled_bus_deployment(self.current_step, "route_NS",
+                                             stops=["busStop_J6_South"], line_name="101_A", interval_steps=150)
+        self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN",
+                                             stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
+        self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE",
+                                             stops=["busStop_J6_East"], line_name="102", interval_steps=200)
+        self.events.scheduled_bus_deployment(self.current_step, route_id="route_EW",
+                                             stops=["busStop_J6_West"], line_name="103", interval_steps=200)
 
         self.events.detector_malfunction()
 
-        #accumulator of priority penalties/rewards
         accumulated_priority_penalty = 0.0
 
-        #if there were some action performed by agent use buffer of yellow light
+        # Przelicz czasy na kroki SUMO
+        yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
+        allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
+        green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s aktywnej fazy
+
         if action_changed:
-            clearing_phase = 1 if self.last_action == 0 else 4
-            self.sumo.set_traffic_light_phase("J6", clearing_phase)
-            for _ in range(20):  # 2s clearance
-                traci.simulationStep()
-                accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
+            if self.last_action == 0:
+                # Zmiana: NS green (faza 0) → WE green (faza 3)
+                # Krok 1: Żółte NS — kierowcy widzą żółte, hamują łagodnie
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_NS_YELLOW)
+                for _ in range(yellow_steps):
+                    traci.simulationStep()
+                    accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
-            yellow_phase = 2 if self.last_action == 0 else 5
-            self.sumo.set_traffic_light_phase("J6", yellow_phase)
-            for _ in range(30): #3 sec for yellow
-                traci.simulationStep()
-                accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
+                # Krok 2: All-red — skrzyżowanie puste, bezpieczny bufor
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_A)
+                for _ in range(allred_steps):
+                    traci.simulationStep()
+                    accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
-        #phase switch
-        phase = 0 if action == 0 else 3
-        self.sumo.set_traffic_light_phase("J6", phase)
+                # Krok 3: WE green
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_WE_GREEN)
 
-        for _ in range(50):
+            else:
+                # Zmiana: WE green (faza 3) → NS green (faza 0)
+                # Krok 1: Żółte WE
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_WE_YELLOW)
+                for _ in range(yellow_steps):
+                    traci.simulationStep()
+                    accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+
+                # Krok 2: All-red — bufor
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_B)
+                for _ in range(allred_steps):
+                    traci.simulationStep()
+                    accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+
+                # Krok 3: NS green
+                self.sumo.set_traffic_light_phase("J6", self.PHASE_NS_GREEN)
+
+        else:
+            # Brak zmiany — tylko upewnij się że faza jest ustawiona poprawnie
+            target_phase = self.PHASE_NS_GREEN if action == 0 else self.PHASE_WE_GREEN
+            self.sumo.set_traffic_light_phase("J6", target_phase)
+
+        # Aktywna faza zielona — zbieramy dane i penalty
+        for _ in range(green_steps):
             traci.simulationStep()
             accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
-        self.last_action = action # save last action
+        self.last_action = action
         comb_obs = self._get_observation()
         metrics = self.sumo.get_junction_metrics()
-
         passing_bonus = self.sumo.get_gps_status()
-
-
         reward = self._get_reward(metrics, action_changed, accumulated_priority_penalty, passing_bonus)
 
         truncated = self.current_step >= self.max_steps
         terminated = traci.simulation.getMinExpectedNumber() <= 0
 
-        #gymnasium requires: obs, reward, terminated, truncated, info
         return comb_obs, reward, terminated, truncated, {}
-
 
     def _calculate_instant_priority_penalty(self, current_action):
         """Penalty for every step in Simulation"""
@@ -139,8 +176,11 @@ class SumoEnv(gym.Env):
         oc = 0.5
         pp = 1.0
         pr = 1.0
-        pb = 1.0
+        bc = 5.0
         ps = 0.7
+
+        emergency_braking_count = traci.simulation.getEmergencyStoppingVehiclesNumber()
+        braking_penalty = emergency_braking_count * bc
 
         #num of cars in queue
         halt_penalty = metrics['total_halting']
@@ -161,7 +201,7 @@ class SumoEnv(gym.Env):
                     prior_reward += 10
 
         #full penalty
-        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty) + pp * priority_penalty + pr * prior_reward + ped_penalty * ps
+        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty + braking_penalty) + pp * priority_penalty + pr * prior_reward + ped_penalty * ps
 
         return float(reward)
 
@@ -170,8 +210,19 @@ class SumoEnv(gym.Env):
         status = self.events.detector_status
         raw_data = self.sumo.get_detector_data()
 
+        masked_data = []
         # if status[i] == 0, put 0 masking
-        masked_data = [raw_data[i] if status[i] == 1 else 0 for i in range(4)]
+        for i in range(4):
+            if status[i] == 1:
+                val = float(raw_data[i])
+                self.detector_history[i].append(val)
+                masked_data.append(val)
+            else:
+                if len(self.detector_history[i]) > 0:
+                    avg = sum(self.detector_history[i])/len(self.detector_history[i])
+                    masked_data.append(float(avg))
+                else:
+                    masked_data.append(0.0)
 
         #Rest od the sim
         ambulances = self.sumo.get_veh_presence(veh_type="ambulance")

@@ -40,6 +40,16 @@ class SumoManager:
             total_waiting_time += traci.lanearea.getWaitingTime(detector)
         return total_waiting_time
 
+    def get_avg_waiting_time_data(self):
+        """Get the waiting time data (sum from vehicles on intake edges)"""
+        total_waiting_time = 0
+        intake_edges = ["-E6", "E3", "-E4", "-E5"]
+        for edge_id in intake_edges:
+            vehicles = traci.edge.getLastStepVehicleIDs(edge_id)
+            for v_id in vehicles:
+                total_waiting_time += traci.vehicle.getWaitingTime(v_id)
+        return total_waiting_time
+
     def get_junction_metrics(self):
         """Download raw data from SUMO junction"""
         metrics = {
@@ -123,3 +133,15 @@ class SumoManager:
                 presence.append(0.0)
 
         return presence
+
+    def get_emission_metrics(self):
+        """Gets data about CO2 emissions and fuel consumption on intakes of the junction"""
+        total_fuel = 0
+        total_co2 = 0
+        intake_edges = ["-E6", "E3", "-E4", "-E5"]
+
+        for edge_id in intake_edges:
+            total_fuel += traci.edge.getFuelConsumption(edge_id)
+            total_co2 += traci.edge.getCO2Emission(edge_id)
+
+        return total_fuel, total_co2
