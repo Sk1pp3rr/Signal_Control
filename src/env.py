@@ -15,7 +15,8 @@ from collections import deque
 class SumoEnv(gym.Env):
     def __init__(self,
                  config_path,
-                 gui=False #weather we want to use GUI
+                 gui=False, #weather we want to use GUI
+                 rank = 0
                  ):
         #TODO: Definition of step 1 and 2
 
@@ -23,7 +24,7 @@ class SumoEnv(gym.Env):
         self.max_steps = 500
         self._sim_step = 0.1
 
-        self.sumo = SUMO_manager.SumoManager(config_path, gui) #init of connector between Agent and SUMO
+        self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
 
         self.history_window = 100 #history of the last 100 correct readings
@@ -73,8 +74,13 @@ class SumoEnv(gym.Env):
         return self._get_observation(), {}
 
     def step(self, action):
+
+        conn = traci.getConnection(self.sumo.label)
+
         self.current_step += 1
         action_changed = action != self.last_action
+
+
 
         # Spawny eventów — bez zmian
         self.events.emergnecy_vechicle_deployment(probability=0.01)
@@ -102,13 +108,13 @@ class SumoEnv(gym.Env):
                 # Krok 1: Żółte NS — kierowcy widzą żółte, hamują łagodnie
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_NS_YELLOW)
                 for _ in range(yellow_steps):
-                    traci.simulationStep()
+                    conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
                 # Krok 2: All-red — skrzyżowanie puste, bezpieczny bufor
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_A)
                 for _ in range(allred_steps):
-                    traci.simulationStep()
+                    conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
                 # Krok 3: WE green
@@ -119,13 +125,13 @@ class SumoEnv(gym.Env):
                 # Krok 1: Żółte WE
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_WE_YELLOW)
                 for _ in range(yellow_steps):
-                    traci.simulationStep()
+                    conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
                 # Krok 2: All-red — bufor
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_B)
                 for _ in range(allred_steps):
-                    traci.simulationStep()
+                    conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
 
                 # Krok 3: NS green
@@ -138,7 +144,7 @@ class SumoEnv(gym.Env):
 
         # Aktywna faza zielona — zbieramy dane i penalty
         for _ in range(green_steps):
-            traci.simulationStep()
+            conn.simulationStep()
             accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
 
         self.last_action = action
@@ -148,7 +154,7 @@ class SumoEnv(gym.Env):
         reward = self._get_reward(metrics, action_changed, accumulated_priority_penalty, passing_bonus)
 
         truncated = self.current_step >= self.max_steps
-        terminated = traci.simulation.getMinExpectedNumber() <= 0
+        terminated = conn.simulation.getMinExpectedNumber() <= 0
 
         return comb_obs, reward, terminated, truncated, {}
 
@@ -170,6 +176,7 @@ class SumoEnv(gym.Env):
 
     #TODO: Implementation of reward for buses and everything with it
     def _get_reward(self,metrics, action_changed, priority_penalty, passing_bonus):
+        conn = traci.getConnection(self.sumo.label)
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -179,7 +186,7 @@ class SumoEnv(gym.Env):
         bc = 5.0
         ps = 0.7
 
-        emergency_braking_count = traci.simulation.getEmergencyStoppingVehiclesNumber()
+        emergency_braking_count = conn.simulation.getEmergencyStoppingVehiclesNumber()
         braking_penalty = emergency_braking_count * bc
 
         #num of cars in queue
@@ -233,16 +240,15 @@ class SumoEnv(gym.Env):
         return np.concatenate([masked_data, ambulances, buses, status, pedestrians]).astype(np.float32)
 
     def close(self):
-        #cleaning
-        if traci.isLoaded():
-            traci.close()
+        self.sumo.close_sim()
 
     def simulate_and_get_ambulance_penalty(self, action, num_steps=50):
+        conn = traci.getConnection(self.sumo.label)
         # same code as function
         amb_penalty_accumulator = 0
 
         for _ in range(num_steps):
-            traci.simulationStep()
+            conn.simulationStep()
 
             amb_presence = self.sumo.get_veh_presence("ambulance")
 

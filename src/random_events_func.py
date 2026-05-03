@@ -28,6 +28,7 @@ class eventManager:
         return 5  # Evening (18:00 - 00:00)
 
     def spawn_dynamic_traffic(self, current_step, route_id):
+        conn = traci.getConnection(self.env.label)
         phase = self.get_time_phase(current_step)
 
         # Probability of car spawn dependent on hour
@@ -43,11 +44,11 @@ class eventManager:
         if random.random() < probs[phase]:
             veh_id = f"veh_{current_step}"
             # Using distribution from vTypeDistribution
-            traci.vehicle.add(veh_id, route_id, typeID="urban_cars")
+            conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
 
         # Spawning bigger trucks only in the early morning
         if phase == 1 and random.random() < 0.03:
-            traci.vehicle.add(f"truck_{current_step}", route_id, typeID="heavy_truck")
+            conn.vehicle.add(f"truck_{current_step}", route_id, typeID="heavy_truck")
 
     def get_normalized_time(self, current_step):
         # assuming 1 step = 5s 24h = 17280 steps
@@ -57,16 +58,18 @@ class eventManager:
 
     #makes list of all avaliable routes defined in simulation
     def find_routes(self):
-        all_routes = traci.route.getIDList()
+        conn = traci.getConnection(self.env.label)
+        all_routes = conn.route.getIDList()
         self.available_routes = [route for route in all_routes if not route.startswith('!')]
         return
 
     def collision(self):
+        conn = traci.getConnection(self.env.label)
         if not self.available_routes:
             self.find_routes()
         # Random choice of lane
         target_lane = random.choice(self.available_routes)
-        traci.lane.setDisallowed(target_lane, ["passenger", "bus", "truck"])
+        conn.lane.setDisallowed(target_lane, ["passenger", "bus", "truck"])
         return
 
     def detector_malfunction(self, probability=0.0005, repair_probability=0.01):
@@ -83,16 +86,17 @@ class eventManager:
                     print(f"--- Detector has been repaired on {i} ---")
 
     def emergnecy_vechicle_deployment(self, probability = 0.001):
+        conn = traci.getConnection(self.env.label)
         if random.random() < probability:
             if not self.available_routes:
                 self.find_routes()
             # Random choice of lane
             route_id = random.choice(self.available_routes)
-            veh_id = f"emergency_{traci.simulation.getTime()}"
+            veh_id = f"emergency_{conn.simulation.getTime()}"
 
             try:
-                traci.vehicle.add(veh_id, route_id, typeID="ambulance")
-                traci.vehicle.setColor(veh_id, (255, 0, 0, 255))
+                conn.vehicle.add(veh_id, route_id, typeID="ambulance")
+                conn.vehicle.setColor(veh_id, (255, 0, 0, 255))
                 print(f"Ambulance on route id: {route_id}")
             except Extension as e:
                 print(f"Error: {e}") #debugging
@@ -104,20 +108,21 @@ class eventManager:
         It leaves bus in fixed time stamps on track, and gives them stops
         interval_steps=100 is approx. 8-9 with step duration 5s. We have it 5 or 8, 8 when it changes phases
         """
+        conn = traci.getConnection(self.env.label)
         # Check if there is time to deploy the bus
         if current_step % interval_steps == 0 and current_step > 0:
             veh_id = f"bus_{line_name}_{current_step}"
             try:
                 # Using vType form XML file
-                traci.vehicle.add(veh_id, route_id, typeID="city_bus")
-                traci.vehicle.setLine(veh_id, line_name)
+                conn.vehicle.add(veh_id, route_id, typeID="city_bus")
+                conn.vehicle.setLine(veh_id, line_name)
                 # If there are any problem with colour: traci.vehicle.setColor(veh_id, (255, 255, 0))
 
                 #Connecting buses with stops
                 if stops:
                     for stop_id in stops:
-                        traci.vehicle.setBusStop(veh_id, stop_id, duration=20)
+                        conn.vehicle.setBusStop(veh_id, stop_id, duration=20)
 
-            except traci.TraCIException as e:
+            except conn.TraCIException as e:
                 # If there are any issues we don't want to destroy anything
                 pass

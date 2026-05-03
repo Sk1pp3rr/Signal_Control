@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-05-03T14:33:19.813372+01:00 by Eclipse SUMO netedit 1.26.0
+<!-- generated on 2026-04-14T00:31:23.771622+01:00 by Eclipse SUMO netedit 1.26.0
 -->
 
 <additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <!-- StoppingPlaces -->
+    <busStop id="busStop_J6_East" lane="E5_1" startPos="109.46" endPos="119.46" lines="101"/>
+    <busStop id="busStop_J6_North" lane="E4_1" startPos="108.25" endPos="118.25" lines="101"/>
+    <busStop id="busStop_J6_South" lane="-E4_1" startPos="109.70" endPos="119.70" lines="101"/>
+    <busStop id="busStop_J6_West" lane="-E5_1" startPos="180.19" endPos="190.19" lines="101"/>
+    <!-- Detectors -->
+    <laneAreaDetector id="e2_0" lane="-E6_1" pos="73.93" length="100.00" friendlyPos="1" period="300.00" file="e2_0.xml"/>
+    <laneAreaDetector id="e2_1" lane="E3_1" pos="162.26" length="100.00" friendlyPos="1" period="300.00" file="e2_1.xml"/>
+    <laneAreaDetector id="e2_2" lane="-E4_1" pos="121.04" length="100.00" friendlyPos="1" period="300.00" file="e2_2.xml"/>
+    <laneAreaDetector id="e2_3" lane="-E5_1" pos="193.13" length="100.00" friendlyPos="1" period="300.00" file="e2_3.xml"/>
 </additional>
