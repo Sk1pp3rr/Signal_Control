@@ -130,7 +130,11 @@ class SumoManager:
                 if conn.vehicle.getDistance(v_id) < 10.0:
                     v_type = conn.vehicle.getTypeID(v_id)
                     if v_type in ["ambulance","city_bus","police","fire_truck"]:
-                        passed_priority.append({'type': v_type, 'wait': conn.vehicle.getWaitingTime(v_id)})
+                        passed_priority.append({
+                            'id': v_id,
+                            'type': v_type,
+                            'wait': conn.vehicle.getWaitingTime(v_id)
+                        })
         return passed_priority
 
     def get_pedestrian_presence(self):

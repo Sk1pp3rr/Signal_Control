@@ -28,14 +28,14 @@ def train():
     env = SubprocVecEnv([make_env(CONFIG_PATH, i) for i in range(num_cpu)])
 
 
-    #auto save after 20k steps
+    #auto save after 50k steps
     checkpoint_callback = CheckpointCallback(
         save_freq=50000 // num_cpu,
         save_path=RESULTS_DIR,
         name_prefix="ppo_sumo_model"
     )
 
-    # 2. chose "brain" (PPO)
+    # 2. brain
     model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_sumo_tensorboard/", n_steps=2048, batch_size= 64)
 
     # 3. Start

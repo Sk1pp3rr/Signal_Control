@@ -80,9 +80,11 @@ class SumoEnv(gym.Env):
         self.current_step += 1
         action_changed = action != self.last_action
 
+        #step_throughput = 0
 
 
-        # Spawny eventów — bez zmian
+
+        # events
         self.events.emergnecy_vechicle_deployment(probability=0.01)
         self.events.scheduled_bus_deployment(self.current_step, "route_NS",
                                              stops=["busStop_J6_South"], line_name="101_A", interval_steps=150)
@@ -97,55 +99,60 @@ class SumoEnv(gym.Env):
 
         accumulated_priority_penalty = 0.0
 
-        # Przelicz czasy na kroki SUMO
+        # Time for steps
         yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
         allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
         green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s aktywnej fazy
 
         if action_changed:
             if self.last_action == 0:
-                # Zmiana: NS green (faza 0) → WE green (faza 3)
-                # Krok 1: Żółte NS — kierowcy widzą żółte, hamują łagodnie
+                # Change: NS green (faza 0) → WE green (Phase 3)
+                # Step 1: yellow NS
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_NS_YELLOW)
                 for _ in range(yellow_steps):
                     conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+                    #step_throughput += conn.simulation.getArrivedNumber()
 
-                # Krok 2: All-red — skrzyżowanie puste, bezpieczny bufor
+                # Step 2 2: All-red
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_A)
                 for _ in range(allred_steps):
                     conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+                    #step_throughput += conn.simulation.getArrivedNumber()
 
-                # Krok 3: WE green
+                # Step 3: WE green
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_WE_GREEN)
 
             else:
-                # Zmiana: WE green (faza 3) → NS green (faza 0)
-                # Krok 1: Żółte WE
+                # Change: WE green (faza 3) → NS green (faza 0)
+                # Step 1: yellow WE
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_WE_YELLOW)
                 for _ in range(yellow_steps):
                     conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+                    #step_throughput += conn.simulation.getArrivedNumber()
 
-                # Krok 2: All-red — bufor
+                # Step 2: All-red
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_ALL_RED_B)
                 for _ in range(allred_steps):
                     conn.simulationStep()
                     accumulated_priority_penalty += self._calculate_instant_priority_penalty(self.last_action)
+                    #step_throughput += conn.simulation.getArrivedNumber()
 
-                # Krok 3: NS green
+                # Step 3: NS green
                 self.sumo.set_traffic_light_phase("J6", self.PHASE_NS_GREEN)
 
         else:
-            # Brak zmiany — tylko upewnij się że faza jest ustawiona poprawnie
+            # No change — Check if phase is correct
             target_phase = self.PHASE_NS_GREEN if action == 0 else self.PHASE_WE_GREEN
             self.sumo.set_traffic_light_phase("J6", target_phase)
 
-        # Aktywna faza zielona — zbieramy dane i penalty
+        # Active green phase
         for _ in range(green_steps):
             conn.simulationStep()
             accumulated_priority_penalty += self._calculate_instant_priority_penalty(action)
+            #step_throughput += conn.simulation.getArrivedNumber()
 
         self.last_action = action
         comb_obs = self._get_observation()
@@ -155,6 +162,8 @@ class SumoEnv(gym.Env):
 
         truncated = self.current_step >= self.max_steps
         terminated = conn.simulation.getMinExpectedNumber() <= 0
+
+        #info = {'step_throughput': step_throughput}
 
         return comb_obs, reward, terminated, truncated, {}
 
