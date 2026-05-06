@@ -75,7 +75,7 @@ class SumoEnv(gym.Env):
 
     def step(self, action):
 
-        conn = traci.getConnection(self.sumo.label)
+        conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
 
         self.current_step += 1
         action_changed = action != self.last_action
@@ -185,7 +185,7 @@ class SumoEnv(gym.Env):
 
     #TODO: Implementation of reward for buses and everything with it
     def _get_reward(self,metrics, action_changed, priority_penalty, passing_bonus):
-        conn = traci.getConnection(self.sumo.label)
+        conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
         #mathematical evaluation of situation in SUMO
         hc = 1 #multiplayer of queue_penalty for cars
         jc = 0.2 #multiplayer of waiting time penalty for cars
@@ -252,7 +252,7 @@ class SumoEnv(gym.Env):
         self.sumo.close_sim()
 
     def simulate_and_get_ambulance_penalty(self, action, num_steps=50):
-        conn = traci.getConnection(self.sumo.label)
+        conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
         # same code as function
         amb_penalty_accumulator = 0
 

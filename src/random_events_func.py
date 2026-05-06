@@ -28,7 +28,7 @@ class eventManager:
         return 5  # Evening (18:00 - 00:00)
 
     def spawn_dynamic_traffic(self, current_step, route_id):
-        conn = traci.getConnection(self.env.label)
+        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
         phase = self.get_time_phase(current_step)
 
         # Probability of car spawn dependent on hour
@@ -58,13 +58,13 @@ class eventManager:
 
     #makes list of all avaliable routes defined in simulation
     def find_routes(self):
-        conn = traci.getConnection(self.env.label)
+        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
         all_routes = conn.route.getIDList()
         self.available_routes = [route for route in all_routes if not route.startswith('!')]
         return
 
     def collision(self):
-        conn = traci.getConnection(self.env.label)
+        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
         if not self.available_routes:
             self.find_routes()
         # Random choice of lane
@@ -86,7 +86,7 @@ class eventManager:
                     print(f"--- Detector has been repaired on {i} ---")
 
     def emergnecy_vechicle_deployment(self, probability = 0.001):
-        conn = traci.getConnection(self.env.label)
+        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
         if random.random() < probability:
             if not self.available_routes:
                 self.find_routes()
@@ -108,7 +108,7 @@ class eventManager:
         It leaves bus in fixed time stamps on track, and gives them stops
         interval_steps=100 is approx. 8-9 with step duration 5s. We have it 5 or 8, 8 when it changes phases
         """
-        conn = traci.getConnection(self.env.label)
+        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
         # Check if there is time to deploy the bus
         if current_step % interval_steps == 0 and current_step > 0:
             veh_id = f"bus_{line_name}_{current_step}"
