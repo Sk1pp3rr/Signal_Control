@@ -8,3 +8,4 @@ numpy
 pandas
 tensorboard
 setuptools<70.0.0
+libsumo

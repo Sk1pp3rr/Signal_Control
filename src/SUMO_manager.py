@@ -1,4 +1,5 @@
 import traci
+import libsumo
 
 
 class SumoManager:
@@ -8,31 +9,42 @@ class SumoManager:
         self.DETECTORS = ["e2_0", "e2_1", "e2_2", "e2_3"] #table of detectors in "krzyzak"
         self.rank = rank
         self.label = f"sim_{self.rank}"
+        self.gui = gui
+        self.tc=traci if self.gui else libsumo
 
     def start_sim(self):
         """Start the SUMO simulator"""
-        traci.start(self.sumo_cmd, label = self.label)
+        if self.gui: #dodane
+            self.tc.start(self.sumo_cmd, label=self.label)
+        else:
+            self.tc.start(self.sumo_cmd)
 
     def close_sim(self):
         """Close the specific SUMO simulator"""
-        try:
-            conn = traci.getConnection(self.label)
-            conn.close()
-        except traci.exceptions.TraCIException:
+        try: #dodane
+            if self.gui:
+                conn=self.tc.getConnection(self.label)
+                conn.close()
+            else:
+                self.tc.close() #dodane
+        except self.tc.exceptions.TraCIException:
             pass
-        except traci.exceptions.FatalTraCIError:
+        except self.tc.exceptions.FatalTraCIError:
             pass
 
     def set_traffic_light_phase(self,junction_id, phase):
         """Set the traffic light phase on the specified junction_id"""
-        conn = traci.getConnection(self.label)
-        conn.trafficlight.setPhase(junction_id, phase)
+        if self.gui: #dodane
+            conn = self.tc.getConnection(self.label)
+            conn.trafficlight.setPhase(junction_id, phase)
+        else:
+            self.tc.trafficlight.setPhase(junction_id, phase)
+
 
     def get_detector_data(self):
         """Get the detection detector data"""
-        conn = traci.getConnection(self.label)
-
         data = []
+        conn=self.tc.getConnection(self.label) if self.gui else self.tc #dodane
         for detector in self.DETECTORS:
             count = conn.lanearea.getLastStepVehicleNumber(detector) #get the data from individual detector
             data.append(count) # add them to our vector
@@ -40,7 +52,7 @@ class SumoManager:
 
     def get_waiting_time_data(self):
         """Get the waiting time detector data"""
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         total_waiting_time = 0
         for detector in self.DETECTORS:
@@ -50,17 +62,19 @@ class SumoManager:
 
     def get_avg_waiting_time_data(self):
         """Get the waiting time data (sum from vehicles on intake edges)"""
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc
+
         total_waiting_time = 0
         intake_edges = ["-E6", "E3", "-E4", "-E5"]
         for edge_id in intake_edges:
-            vehicles = traci.edge.getLastStepVehicleIDs(edge_id)
+            vehicles = conn.edge.getLastStepVehicleIDs(edge_id)
             for v_id in vehicles:
-                total_waiting_time += traci.vehicle.getWaitingTime(v_id)
+                total_waiting_time += conn.vehicle.getWaitingTime(v_id)
         return total_waiting_time
 
     def get_junction_metrics(self):
         """Download raw data from SUMO junction"""
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         metrics = {
             'total_halting': 0,
@@ -76,7 +90,7 @@ class SumoManager:
 
      #funkja sprawdza czy mamy ambulans na mapie lub czy utknela w korku
     def get_ambulance_metrics(self):
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         vehicle_id=conn.vehicle.getIDList()
         ambulances=[] # were prepering list for ambulances
@@ -103,7 +117,7 @@ class SumoManager:
     # sooo the agent can get the data both ways, not to neglect the existence of ambulances not integrated with the system.
     def get_veh_presence(self, veh_type):
         """Returns vector [0,0,0,0] with 1, in place where there is veh_type (GPS or Sensor)"""
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         presence=[0,0,0,0]
         for idx, det_id in enumerate(self.DETECTORS):
@@ -117,7 +131,7 @@ class SumoManager:
     def get_gps_status(self):
         """Simulates GPS data, return list od vehicles witch could be connected to the city network (potentially gps e.g. emergency and city_buses)
         witch left the simulation or rode through the junction (left the edges)"""
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc
 
         passed_priority = []
 
@@ -142,7 +156,7 @@ class SumoManager:
         ped_edges = ["-E4", "E3", "-E5", "-E6"]
         presence = []
 
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         for edge in ped_edges:
             # Check if there is more than 0 persons on the edge
@@ -160,7 +174,7 @@ class SumoManager:
         total_co2 = 0
         intake_edges = ["-E6", "E3", "-E4", "-E5"]
 
-        conn = traci.getConnection(self.label)
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
         for edge_id in intake_edges:
             total_fuel += conn.edge.getFuelConsumption(edge_id)

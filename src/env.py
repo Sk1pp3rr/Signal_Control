@@ -22,7 +22,7 @@ class SumoEnv(gym.Env):
 
         self.current_step = 0
         self.max_steps = 500
-        self._sim_step = 0.1
+        self._sim_step = 1.0 #zmiana 0.1 => 1.0 na probe why not
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)

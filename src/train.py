@@ -36,7 +36,7 @@ def train():
     )
 
     # 2. brain
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_sumo_tensorboard/", n_steps=2048, batch_size= 64)
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_sumo_tensorboard/", n_steps=2048, batch_size= 512) #poprawienie z 64 na 512
 
     # 3. Start
     print("Start training...")
