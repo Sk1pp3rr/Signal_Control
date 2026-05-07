@@ -22,7 +22,7 @@ class SumoEnv(gym.Env):
 
         self.current_step = 0
         self.max_steps = 500
-        self._sim_step = 1.0 #zmiana 0.1 => 1.0 na probe why not
+        self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom 
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
@@ -45,9 +45,9 @@ class SumoEnv(gym.Env):
         self.config_path = config_path
         self.gui = gui
 
-        self.YELLOW_DUR = 3
-        self.ALLRED_DUR = 3
-        self.GREEN_DUR = 5
+        self.YELLOW_DUR = 4
+        self.ALLRED_DUR = 2
+        self.GREEN_DUR = 10
 
         self.PHASE_NS_GREEN = 0  # gGrrgGrrrGrG  32s
         self.PHASE_NS_YELLOW = 1  # yyrryyrrrrrrr  3s
