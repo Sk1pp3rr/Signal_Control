@@ -3,11 +3,13 @@
 # Agent does not have control on individual lights but only on phases defined in SUMO!!!
 # Step 3: Cycle logic: Get action from AI (e.g. Agent chooses 0) -> Send command to SUMO by TraCI -> Do jump in time e.g. 5s -> check sensors -> Get the reward
 # Step 4: Reward func for start kindergarden this will probably work: -(sum of cars in congestions on all detectors), Agent will try to minimalize his punishment
+import math
 
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import traci
+import random
 import SUMO_manager
 from random_events_func import eventManager
 from collections import deque
@@ -19,7 +21,6 @@ class SumoEnv(ParallelEnv):
                  gui=False, #weather we want to use GUI
                  rank = 0
                  ):
-        #TODO: Definition of step 1 and 2
 
         self.current_step = 0
         self.max_steps = 500
@@ -38,7 +39,8 @@ class SumoEnv(ParallelEnv):
         self.observation_space ={agent:  spaces.Box(
             low=0,
             high=100,
-            shape=(20,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians
+            shape=(22,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians and 2 for normalized daytime sin and cos
+            #it's done for time to be a cycle (avoiding jumps from 1.0 to 0)
             dtype=np.float32
         ) for agent in self.agents} # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
@@ -64,7 +66,13 @@ class SumoEnv(ParallelEnv):
               seed=None,
               options = None
               ):
-        self.current_step = 0
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+
+        self.current_step = random.randint(0, 17280) # to make training more efficient we will choose random time during the day to start an agent
+
+        #self.current_step = 0
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
         self.last_action = 0
@@ -89,7 +97,15 @@ class SumoEnv(ParallelEnv):
 
 
         # events
-        self.events.emergnecy_vechicle_deployment(probability=0.01)
+        #Spawning cars in simulation steps to simulate traffic intensity throughout a day
+        self.events.spawn_dynamic_traffic(self.current_step, "route_NS")
+        self.events.spawn_dynamic_traffic(self.current_step, "route_SN")
+        self.events.spawn_dynamic_traffic(self.current_step, "route_WE")
+        self.events.spawn_dynamic_traffic(self.current_step, "route_EW")
+
+        self.events.emergnecy_vechicle_deployment(probability=0.01) #emergency
+
+        #Buses
         self.events.scheduled_bus_deployment(self.current_step, "route_NS",
                                              stops=["busStop_J6_South"], line_name="101_A", interval_steps=150)
         self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN",
@@ -106,7 +122,7 @@ class SumoEnv(ParallelEnv):
         # Time for steps
         yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
         allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
-        green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s aktywnej fazy
+        green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s
 
         if action_changed:
             if self.last_action == 0:
@@ -249,8 +265,13 @@ class SumoEnv(ParallelEnv):
         buses = self.sumo.get_veh_presence(veh_type="city_bus")
         pedestrians = self.sumo.get_pedestrian_presence()
 
+        time_of_day = self.events.get_normalized_time(self.current_step) #agent should know what time of day it is
+
+        sin_time = math.sin(2 * math.pi * time_of_day)
+        cos_time = math.cos(2 * math.pi * time_of_day)
+
         # vector
-        return np.concatenate([masked_data, ambulances, buses, status, pedestrians]).astype(np.float32)
+        return np.concatenate([masked_data, ambulances, buses, status, pedestrians, [sin_time,cos_time]]).astype(np.float32)
 
     def close(self):
         self.sumo.close_sim()
