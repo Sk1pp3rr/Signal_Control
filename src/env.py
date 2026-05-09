@@ -11,8 +11,9 @@ import traci
 import SUMO_manager
 from random_events_func import eventManager
 from collections import deque
+from pettingzoo import ParallelEnv  #bedziemy tego uzywac poniewaz biblioteka gymnasiium sama w sobie nie radzi sobie z wieloma agentami wiec musimy ja rozszerzyc
 
-class SumoEnv(gym.Env):
+class SumoEnv(ParallelEnv):
     def __init__(self,
                  config_path,
                  gui=False, #weather we want to use GUI
@@ -22,25 +23,28 @@ class SumoEnv(gym.Env):
 
         self.current_step = 0
         self.max_steps = 500
-        self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom 
+        self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom
+        self.posible_agents=["J6", "J7"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
+        self.agents=self.posible_agents[:]
+
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
-
         self.history_window = 100 #history of the last 100 correct readings
         self.detector_history = [deque(maxlen=self.history_window) for _ in range(4)]
         #---Step 1: Observation space---
 
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
-        self.observation_space = spaces.Box(
+        self.observation_space ={agent:  spaces.Box(
             low=0,
             high=100,
             shape=(20,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians
             dtype=np.float32
-        ) # box is the table of floats, it should be enough for AI to know where traffic is building
+        ) for agent in self.agents} # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
         # 0: vertical green light, 1: horizontally green light
-        self.action_space = spaces.Discrete(2) #discrete action of possible "two buttons"
+        self.action_space = {
+            agent: spaces.Discrete(2) for agent in self.agents } #discrete action of possible "two buttons"
         self.last_action = 0 # last action performed by agent
         self.config_path = config_path
         self.gui = gui

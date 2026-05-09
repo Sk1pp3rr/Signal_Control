@@ -6,11 +6,26 @@ class SumoManager:
     def __init__(self, config_path, gui=False, rank = 0):
         self.config_path = config_path
         self.sumo_cmd = ["sumo-gui" if gui else "sumo", "-c", self.config_path, "--start"] #Manager will automatically work dependably of weather gui is enabled
-        self.DETECTORS = ["e2_0", "e2_1", "e2_2", "e2_3"] #table of detectors in "krzyzak"
+        #self.DETECTORS = ["e2_0", "e2_1", "e2_2", "e2_3"] #table of detectors in "krzyzak"
         self.rank = rank
         self.label = f"sim_{self.rank}"
         self.gui = gui
         self.tc=traci if self.gui else libsumo
+        self.junction_detectors={
+            "J6": ["e2_0", "e2_1", "e2_2", "e2_3"],
+            "J7": ["det_J7_N", "det_J7_S", "det_J7_E", "det_J7_W"]
+        } #bedziemy mieli tutaj detektory dla konretnego skrzyzowania
+
+        self.junction_intake_edges={
+            "J6": ["-E6", "E3", "-E4", "-E5"],
+            "J7": ["-E6", "E3", "-E4", "-E5"]
+        }
+        self.junction_exit_edges={
+            "J6": ["E3","E4","E5","E6"],
+            "J7": ["E3","E4","E5","E6"]
+        }
+
+
 
     def start_sim(self):
         """Start the SUMO simulator"""
@@ -41,11 +56,13 @@ class SumoManager:
             self.tc.trafficlight.setPhase(junction_id, phase)
 
 
-    def get_detector_data(self):
+
+    def get_detector_data(self, junction_id): #dodamy ze bedziemy pobierac z konkretnego skrzyzowania
         """Get the detection detector data"""
+        detectors=self.junction_detectors[junction_id] #bierzemy konkretny detektor
         data = []
         conn=self.tc.getConnection(self.label) if self.gui else self.tc #dodane
-        for detector in self.DETECTORS:
+        for detector in detectors:
             count = conn.lanearea.getLastStepVehicleNumber(detector) #get the data from individual detector
             data.append(count) # add them to our vector
         return data # e.g. [3,2,0,5]
