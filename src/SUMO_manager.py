@@ -1,5 +1,6 @@
 import traci
 import libsumo
+from libsumo import junction
 
 
 class SumoManager:
@@ -23,6 +24,10 @@ class SumoManager:
         self.junction_exit_edges={
             "J6": ["E3","E4","E5","E6"],
             "J7": ["E3","E4","E5","E6"]
+        }
+        self.ped_edges = {
+          "J6":  ["-E4", "E3", "-E5", "-E6"],
+          "J7": ["-E4", "E3", "-E5", "-E6"]
         }
 
 
@@ -66,78 +71,56 @@ class SumoManager:
             count = conn.lanearea.getLastStepVehicleNumber(detector) #get the data from individual detector
             data.append(count) # add them to our vector
         return data # e.g. [3,2,0,5]
-
-    def get_waiting_time_data(self):
+    def get_waiting_time_data(self, junction_id):
         """Get the waiting time detector data"""
         conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
-
+        detectors=self.junction_detectors[junction_id] #bierzemy konkretny detektor
         total_waiting_time = 0
-        for detector in self.DETECTORS:
+        for detector in detectors:
             # Get total weiting time from each generator
             total_waiting_time += conn.lanearea.getWaitingTime(detector)
         return total_waiting_time
 
-    def get_avg_waiting_time_data(self):
+    #def get_avg_waiting_time_data(self, junction_id): #tego nie uzywamy
         """Get the waiting time data (sum from vehicles on intake edges)"""
         conn = self.tc.getConnection(self.label) if self.gui else self.tc
 
         total_waiting_time = 0
-        intake_edges = ["-E6", "E3", "-E4", "-E5"]
+        intake_edges = self.junction_intake_edges[junction_id]
         for edge_id in intake_edges:
             vehicles = conn.edge.getLastStepVehicleIDs(edge_id)
             for v_id in vehicles:
                 total_waiting_time += conn.vehicle.getWaitingTime(v_id)
         return total_waiting_time
 
-    def get_junction_metrics(self):
+    def get_junction_metrics(self, junction_id):
         """Download raw data from SUMO junction"""
-        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
+        conn = self.tc.getConnection(self.label) if self.gui else self.tc
 
+        # Tworzymy NOWY słownik tylko dla tego jednego wywołania
         metrics = {
             'total_halting': 0,
             'max_jam_length': 0,
             'occupancy': 0
         }
-        for detector in self.DETECTORS:
 
+        detectors = self.junction_detectors[junction_id]
+
+        for detector in detectors:
             metrics['total_halting'] += conn.lanearea.getLastStepHaltingNumber(detector)
             metrics['max_jam_length'] += conn.lanearea.getLastIntervalMaxJamLengthInMeters(detector)
             metrics['occupancy'] += conn.lanearea.getLastStepOccupancy(detector)
+
         return metrics
-
-     #funkja sprawdza czy mamy ambulans na mapie lub czy utknela w korku
-    def get_ambulance_metrics(self):
-        conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
-
-        vehicle_id=conn.vehicle.getIDList()
-        ambulances=[] # were prepering list for ambulances
-        for i in vehicle_id:
-            if conn.vehicle.getTypeID(i) == "ambulance":
-                is_ambulance=True
-                is_ambulance_stuck = False
-                ambulance_lane = None
-
-                waiting_time=conn.vehicle.getWaitingTime(i) #we check how long ambulance are waiting
-                if waiting_time > 5:
-                    is_ambulance_stuck=True
-                for detector in self.DETECTORS:
-                    cars_in_detecor=conn.lanearea.getLastStepVehicleIDs(detector) #list of cars that are in range of detector
-                    if i in cars_in_detecor:
-                        ambulance_lane=detector
-                wektor=[is_ambulance,is_ambulance_stuck, ambulance_lane]
-                ambulances.append(wektor)
-
-
-        return ambulances
 
     # This implementation is weird because I came to conclusion that not every ambulance will come from the "city of origin" where this agent could be working
     # sooo the agent can get the data both ways, not to neglect the existence of ambulances not integrated with the system.
-    def get_veh_presence(self, veh_type):
+    def get_veh_presence(self, veh_type, junction_id):
         """Returns vector [0,0,0,0] with 1, in place where there is veh_type (GPS or Sensor)"""
         conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
-
+        detectors=self.junction_detectors[junction_id]#bierzemy konkretny detektor
         presence=[0,0,0,0]
-        for idx, det_id in enumerate(self.DETECTORS):
+        for idx, det_id in enumerate(detectors):
             vehicle_on_det = conn.lanearea.getLastStepVehicleIDs(det_id)
             for veh_id in vehicle_on_det:
                 if conn.vehicle.getTypeID(veh_id) == veh_type:
@@ -145,14 +128,14 @@ class SumoManager:
                     break
         return presence
 
-    def get_gps_status(self):
+    def get_gps_status(self, junction_id):
         """Simulates GPS data, return list od vehicles witch could be connected to the city network (potentially gps e.g. emergency and city_buses)
         witch left the simulation or rode through the junction (left the edges)"""
         conn = self.tc.getConnection(self.label) if self.gui else self.tc
 
         passed_priority = []
 
-        exit_edges = ["E3","E4","E5","E6"]
+        exit_edges = self.junction_exit_edges[junction_id]
 
         for edge_id in exit_edges:
             # get all the car's id on intake edges
@@ -168,9 +151,9 @@ class SumoManager:
                         })
         return passed_priority
 
-    def get_pedestrian_presence(self):
+    def get_pedestrian_presence(self, junction_id):
         """Simulation of pedestrians buttons on crosswalks, return if they are any pedestrians on the edges"""
-        ped_edges = ["-E4", "E3", "-E5", "-E6"]
+        ped_edges=self.ped_edges[junction_id]
         presence = []
 
         conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
@@ -185,11 +168,11 @@ class SumoManager:
 
         return presence
 
-    def get_emission_metrics(self):
+    def get_emission_metrics(self,junction_id):
         """Gets data about CO2 emissions and fuel consumption on intakes of the junction"""
         total_fuel = 0
         total_co2 = 0
-        intake_edges = ["-E6", "E3", "-E4", "-E5"]
+        intake_edges =self.junction_intake_edges[junction_id]
 
         conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
 
