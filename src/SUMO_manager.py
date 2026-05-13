@@ -47,11 +47,9 @@ class SumoManager:
                 conn.close()
             else:
                 self.tc.close() #dodane
-        except self.tc.exceptions.TraCIException:
+        except Exception:
             pass
-        except self.tc.exceptions.FatalTraCIError:
-            pass
-
+        
     def set_traffic_light_phase(self,junction_id, phase):
         """Set the traffic light phase on the specified junction_id"""
         if self.gui: #dodane
