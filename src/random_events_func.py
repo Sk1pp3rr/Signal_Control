@@ -9,7 +9,9 @@ class eventManager:
     def __init__(self, sumo_env):
         self.env = sumo_env
         self.available_routes = []
-        self.detector_status = [1,1,1,1] #is detector working 1->yes , 0->no la policiaaa :(
+        self.detector_status = {
+          "J6": [1,1,1,1],
+          "J7": [1,1,1,1] } #for every detector we have 4 status we can add more ofc
         from collections import deque
         self.history_window = 100
         self.detector_history = [deque(maxlen = self.history_window) for _ in range(4)]
