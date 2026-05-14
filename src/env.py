@@ -26,8 +26,9 @@ class SumoEnv(ParallelEnv):
         self.current_step=0
         self.max_steps = 500
         self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom
-        self.posible_agents=["J6", "J7"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
-        self.agents = self.posible_agents[:]
+
+        self.posible_agents=["J6", "J8", "J15"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
+        self.agents=self.posible_agents[:]
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
@@ -52,7 +53,8 @@ class SumoEnv(ParallelEnv):
             agent: spaces.Discrete(2) for agent in self.agents } #discrete action of possible "two buttons"
         self.last_action ={
             "J6": 0,
-            "J7": 0
+            "J8": 0,
+            "J15": 0
         }  # last action performed by agent
         self.config_path = config_path
         self.gui = gui
@@ -67,6 +69,11 @@ class SumoEnv(ParallelEnv):
         self.PHASE_WE_GREEN = 3  # rrgGrrrGGrGr  32s
         self.PHASE_WE_YELLOW = 4  # rryyrryyrrrr   3s
         self.PHASE_ALL_RED_B = 5  # rrrrrrrrrrrr   2s  (bufor po WE)
+
+        # Time for steps
+        self.yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
+        self.allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
+        self.green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s
 
 
     def reset(self,
@@ -122,10 +129,8 @@ class SumoEnv(ParallelEnv):
 
         accumulated_priority_penalty = {agent:0 for agent in self.agents} #for every agent
 
-        # Time for steps
-        yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
-        allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
-        green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s
+
+
 
         for agent in self.agents:
             action_changed = action[agent] != self.last_action[agent]  # sprawdza
@@ -135,8 +140,9 @@ class SumoEnv(ParallelEnv):
                 elif self.last_action[agent] == 1:
                    self.sumo.set_traffic_light_phase(agent, self.PHASE_WE_YELLOW)
 
-        for _ in range(yellow_steps):
+        for _ in range(self.yellow_steps):
             conn.simulationStep()
+
 
             step_penalties=self._calculate_instant_priority_penalty(self.last_action)
             for agent in self.agents:
@@ -151,7 +157,8 @@ class SumoEnv(ParallelEnv):
                elif self.last_action[agent] == 1:
                    self.sumo.set_traffic_light_phase(agent, self.PHASE_ALL_RED_B)
 
-        for _ in range(allred_steps):
+
+        for _ in range(self.allred_steps):
             conn.simulationStep()
 
             step_penalties=self._calculate_instant_priority_penalty(self.last_action)
@@ -165,7 +172,9 @@ class SumoEnv(ParallelEnv):
             elif action[agent] == 1:
                 self.sumo.set_traffic_light_phase(agent, self.PHASE_WE_GREEN)
 
-        for _ in range(green_steps):
+
+        # Active green phase
+        for _ in range(self.green_steps):
             conn.simulationStep()
             step_penalties=self._calculate_instant_priority_penalty(action)
             for agent in self.agents:
@@ -255,12 +264,14 @@ class SumoEnv(ParallelEnv):
 
         return float(reward)
 
-    def _get_observation(self):
+    def _get_observation(self, agent_id):
         # Status 0 or 1
+
         observation={}
         for agent in self.agents:
             status = self.events.detector_status[agent]
             raw_data = self.sumo.get_detector_data(agent)
+
 
             masked_data = []
             # if status[i] == 0, put 0 masking

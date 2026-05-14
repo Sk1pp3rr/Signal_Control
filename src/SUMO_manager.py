@@ -14,16 +14,19 @@ class SumoManager:
         self.tc=traci if self.gui else libsumo
         self.junction_detectors={
             "J6": ["e2_0", "e2_1", "e2_2", "e2_3"],
-            "J7": ["det_J7_N", "det_J7_S", "det_J7_E", "det_J7_W"]
+            "J8": ["e2_6", "e2_7", "e2_4", "e2_5"],
+            "J15": ["e2_8","e2_9","e2_10","e2_11"]
         } #bedziemy mieli tutaj detektory dla konretnego skrzyzowania
 
         self.junction_intake_edges={
             "J6": ["-E6", "E3", "-E4", "-E5"],
-            "J7": ["-E6", "E3", "-E4", "-E5"]
+            "J8": ["-E11", "E5", "-E10", "-E12"],
+            "J15": ["-E15", "E12", "-E14", "-E13"]
         }
         self.junction_exit_edges={
-            "J6": ["E3","E4","E5","E6"],
-            "J7": ["E3","E4","E5","E6"]
+            "J6": ["E6","-E3","E4","E5"],
+            "J8": ["E11","-E5","E10","E12"],
+            "J15": ["E15","-E12","E14","E13"]
         }
         self.ped_edges = {
           "J6":  ["-E4", "E3", "-E5", "-E6"],
