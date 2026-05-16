@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+
+    <route id="route_WE" edges="E3 E5 E12 E13"/>
+    <route id="route_EW" edges="-E13 -E12 -E5 -E3"/>
+
+    <route id="route_NS_J6" edges="-E4 E6"/>
+    <route id="route_SN_J6" edges="-E6 E4"/>
+
+    <route id="route_NS_J8" edges="-E10 E11"/>
+    <route id="route_SN_J8" edges="-E11 E10"/>
+
+    <route id="route_NS_J15" edges="-E14 E15"/>
+    <route id="route_SN_J15" edges="-E15 E14"/>
+
+    <route id="route_W_to_N_J6" edges="E3 E4"/>
+    <route id="route_W_to_S_J6" edges="E3 E6"/>
+
+    <route id="route_N_to_W_J6" edges="-E4 -E3"/>
+    <route id="route_N_to_E_J6" edges="-E4 E5 E12 E13"/>
+
+    <route id="route_S_to_W_J6" edges="-E6 -E3"/>
+    <route id="route_S_to_E_J6" edges="-E6 E5 E12 E13"/>
+
+    <route id="route_W_to_N_J8" edges="E3 E5 E10"/>
+    <route id="route_W_to_S_J8" edges="E3 E5 E11"/>
+    <route id="route_E_to_N_J8" edges="-E13 -E12 E10"/>
+    <route id="route_E_to_S_J8" edges="-E13 -E12 E11"/>
+
+    <route id="route_N_to_W_J8" edges="-E10 -E5 -E3"/>
+    <route id="route_N_to_E_J8" edges="-E10 E12 E13"/>
+
+    <route id="route_S_to_W_J8" edges="-E11 -E5 -E3"/>
+    <route id="route_S_to_E_J8" edges="-E11 E12 E13"/>
+
+    <route id="route_E_to_N_J15" edges="-E13 E14"/>
+    <route id="route_E_to_S_J15" edges="-E13 E15"/>
+
+    <route id="route_N_to_E_J15" edges="-E14 E13"/>
+    <route id="route_N_to_W_J15" edges="-E14 -E12 -E5 -E3"/>
+
+    <route id="route_S_to_E_J15" edges="-E15 E13"/>
+    <route id="route_S_to_W_J15" edges="-E15 -E12 -E5 -E3"/>
+
+</routes>

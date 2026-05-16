@@ -10,8 +10,10 @@ class eventManager:
         self.env = sumo_env
         self.available_routes = []
         self.detector_status = {
-          "J6": [1,1,1,1],
-          "J7": [1,1,1,1] } #for every detector we have 4 status we can add more ofc
+            "J6": [1,1,1,1],
+            "J8": [1,1,1,1],
+            "J15": [1,1,1,1]
+        } #for every detector we have 4 status we can add more ofc
         from collections import deque
         self.history_window = 100
         self.detector_history = [deque(maxlen = self.history_window) for _ in range(4)]
@@ -35,22 +37,30 @@ class eventManager:
 
         # Probability of car spawn dependent on hour
         probs = {
-            0: 0.005,
-            1: 0.05,
-            2: 0.2,
-            3: 0.08,
-            4: 0.18,
-            5: 0.04
+            0: 0.03,
+            1: 0.1,
+            2: 0.3,
+            3: 0.15,
+            4: 0.25,
+            5: 0.1
         }
 
         if random.random() < probs[phase]:
-            veh_id = f"veh_{current_step}"
+            veh_id = f"veh_{current_step}_{route_id}"
             # Using distribution from vTypeDistribution
-            conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
+            try:
+                # Using distribution from vTypeDistribution
+                conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
+            except traci.exceptions.TraCIException as e:
+                # If car has a problem we don't want SUMO to break
+                pass
 
         # Spawning bigger trucks only in the early morning
-        if phase == 1 and random.random() < 0.03:
-            conn.vehicle.add(f"truck_{current_step}", route_id, typeID="heavy_truck")
+        if phase == 1 and random.random() < 0.015:
+            try:
+                conn.vehicle.add(f"truck_{current_step}_{route_id}", route_id, typeID="heavy_truck")
+            except traci.exceptions.TraCIException:
+                pass
 
     def get_normalized_time(self, current_step):
         # assuming 1 step = 5s 24h = 17280 steps
@@ -75,17 +85,18 @@ class eventManager:
         return
 
     def detector_malfunction(self, probability=0.0005, repair_probability=0.01):
-        for i in range(len(self.detector_status)):
-            if self.detector_status[i] == 1:
-                # If detector is working, check if it will be broken
-                if random.random() < probability:
-                    self.detector_status[i] = 0
-                    print(f"!!! DETECTOR has mulfunction on {i} !!!")
-            else:
-                # If detector is not working check if it will be repaired
-                if random.random() < repair_probability:
-                    self.detector_status[i] = 1
-                    print(f"--- Detector has been repaired on {i} ---")
+        for agent_id, status_list in self.detector_status.items():
+            for i in range(len(status_list)):
+                if status_list[i] == 1:
+                    # If detector is working, check if it will be broken
+                    if random.random() < probability:
+                        self.detector_status[agent_id][i] = 0
+                        print(f"!!! DETECTOR has mulfunction on {agent_id}, intake: {i} !!!")
+                else:
+                    # If detector is not working check if it will be repaired
+                    if random.random() < repair_probability:
+                        self.detector_status[agent_id][i] = 1
+                        print(f"--- Detector has been repaired on {agent_id}, intake: {i} ---")
 
     def emergnecy_vechicle_deployment(self, probability = 0.001):
         conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc

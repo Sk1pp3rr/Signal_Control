@@ -1,8 +1,8 @@
 <configuration>
     <input>
-        <net-file value="krzyzak.net.xml"/>
-    	<route-files value="test_routes.rou.xml"/>
-    	<additional-files value="mapaWithBuses.add.xml,vehType\urban_drivers.add.xml"/>
+        <net-file value="krzyrzakv2.net.xml"/>
+    	<route-files value="base_routes.rou.xml"/>
+    	<additional-files value="krzyrzakv3WithBuses.add.xml,vehType\urban_drivers.add.xml"/>
     </input>
 
     <processing>

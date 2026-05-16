@@ -24,6 +24,7 @@ class SumoEnv(ParallelEnv):
                  ):
 
         self.current_step=0
+        self.episode_step=0
         self.max_steps = 500
         self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom
 
@@ -37,6 +38,7 @@ class SumoEnv(ParallelEnv):
             agent: [deque(maxlen=self.history_window) for _ in range(4)]
             for agent in self.agents
         }
+        self.last_action = {agent: 0 for agent in self.agents}
         #---Step 1: Observation space---
 
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
@@ -84,11 +86,14 @@ class SumoEnv(ParallelEnv):
             random.seed(seed)
             np.random.seed(seed)
 
-        self.current_step = random.randint(0, 17280) # to make training more efficient we will choose random time during the day to start an agent
-
-        #self.current_step = 0
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
+
+        hour_step = 720
+        self._choose_daytime(options,hour_step)
+
+        self.episode_step = 0  # Zerujemy stoper epizodu
+
         for agent in self.agents:
             self.last_action[agent]=0
             self.events.detector_status[agent] = [1, 1, 1, 1]
@@ -102,35 +107,21 @@ class SumoEnv(ParallelEnv):
         conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
 
         self.current_step += 1
+        self.episode_step += 1
         #step_throughput = 0
-
-
 
         # events
         #Spawning cars in simulation steps to simulate traffic intensity throughout a day
-        self.events.spawn_dynamic_traffic(self.current_step, "route_NS")
-        self.events.spawn_dynamic_traffic(self.current_step, "route_SN")
-        self.events.spawn_dynamic_traffic(self.current_step, "route_WE")
-        self.events.spawn_dynamic_traffic(self.current_step, "route_EW")
+        self._generate_traffic()
 
         self.events.emergnecy_vechicle_deployment(probability=0.01) #emergency
 
         #Buses
-        self.events.scheduled_bus_deployment(self.current_step, "route_NS",
-                                             stops=["busStop_J6_South"], line_name="101_A", interval_steps=150)
-        self.events.scheduled_bus_deployment(self.current_step, route_id="route_SN",
-                                             stops=["busStop_J6_North"], line_name="101_B", interval_steps=180)
-        self.events.scheduled_bus_deployment(self.current_step, route_id="route_WE",
-                                             stops=["busStop_J6_East"], line_name="102", interval_steps=200)
-        self.events.scheduled_bus_deployment(self.current_step, route_id="route_EW",
-                                             stops=["busStop_J6_West"], line_name="103", interval_steps=200)
+        self._generate_buses()
 
         self.events.detector_malfunction() #tutaj mamy jakas mozliwa
 
         accumulated_priority_penalty = {agent:0 for agent in self.agents} #for every agent
-
-
-
 
         for agent in self.agents:
             action_changed = action[agent] != self.last_action[agent]  # sprawdza
@@ -189,8 +180,9 @@ class SumoEnv(ParallelEnv):
         truncated={}
         terminated={}
         infos={agent:{} for agent in self.agents} #dla kazdego
-        is_simulation_empty = conn.simulation.getMinExpectedNumber() <= 0
-        is_time_up=self.current_step >= self.max_steps
+        #is_simulation_empty = conn.simulation.getMinExpectedNumber() <= 0
+        is_simulation_empty = False
+        is_time_up=self.episode_step >= self.max_steps
 
         for agent in self.agents:
             metrics=self.sumo.get_junction_metrics(agent)
@@ -264,10 +256,15 @@ class SumoEnv(ParallelEnv):
 
         return float(reward)
 
-    def _get_observation(self, agent_id):
+    def _get_observation(self):
         # Status 0 or 1
 
         observation={}
+        time_of_day = self.events.get_normalized_time(self.current_step)  # agent should know what time of day it is
+
+        sin_time = math.sin(2 * math.pi * time_of_day)
+        cos_time = math.cos(2 * math.pi * time_of_day)
+
         for agent in self.agents:
             status = self.events.detector_status[agent]
             raw_data = self.sumo.get_detector_data(agent)
@@ -292,37 +289,13 @@ class SumoEnv(ParallelEnv):
             buses = self.sumo.get_veh_presence(veh_type="city_bus", junction_id=agent)
             pedestrians = self.sumo.get_pedestrian_presence(agent)
 
-
-
-        time_of_day = self.events.get_normalized_time(self.current_step) #agent should know what time of day it is
-
-        sin_time = math.sin(2 * math.pi * time_of_day)
-        cos_time = math.cos(2 * math.pi * time_of_day)
-        observation[agent] = np.concatenate([masked_data, ambulances, buses, status, pedestrians, [sin_time, cos_time]]).astype(np.float32)
+            observation[agent] = np.concatenate([masked_data, ambulances, buses, status, pedestrians, [sin_time, cos_time]]).astype(np.float32)
         # vector
         return observation
 
     def close(self):
         self.sumo.close_sim()
 
-    #def simulate_and_get_ambulance_penalty(self, action, num_steps=50):
-     #   conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
-      #  # same code as function
-       # amb_penalty_accumulator = 0
-
-        #for _ in range(num_steps):
-         #   conn.simulationStep()
-
-          #  amb_presence = self.sumo.get_veh_presence("ambulance")
-
-           # for idx, is_amb in enumerate(amb_presence):
-            #    if is_amb:
-             #       is_green = (idx < 2 and action == 0) or (idx >= 2 and action == 1)
-
-              #      if not is_green:
-               #         amb_penalty_accumulator += 10
-
-        #return amb_penalty_accumulator
 
     def calculate_ped_penalty(self,agent):
         ped_presence = self.sumo.get_pedestrian_presence(agent)
@@ -336,3 +309,84 @@ class SumoEnv(ParallelEnv):
                 if is_red_for_ped:
                     ped_penalty_accumulator -= 1.0
         return ped_penalty_accumulator
+
+    def _generate_buses(self):
+        # Main lines going through
+        self.events.scheduled_bus_deployment(
+            self.current_step,
+            route_id="route_WE",
+            stops=["busStop_J6_East", "busStop_J15_East"],
+            line_name="100_Express_WE",
+            interval_steps=300
+        )
+        self.events.scheduled_bus_deployment(
+            self.current_step,
+            route_id="route_EW",
+            stops=["busStop_J15_West", "busStop_J6_West"],
+            line_name="100_Express_EW",
+            interval_steps=300
+        )
+
+        # 2. Local J6 (West)
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_NS_J6",
+            stops=["busStop_J6_South"],
+            line_name="101_NS", interval_steps=200
+        )
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_SN_J6",
+            stops=["busStop_J6_North"],
+            line_name="101_SN", interval_steps=210
+        )
+
+        # 3. Local J8 (Middle)
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_NS_J8",
+            stops=["busStop_J8_South"],
+            line_name="102_NS", interval_steps=220
+        )
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_SN_J8",
+            stops=["busStop_J8_North"],
+            line_name="102_SN", interval_steps=230
+        )
+
+        # 4. Local J15 (East)
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_NS_J15",
+            stops=["busStop_J15_South"],
+            line_name="103_NS", interval_steps=200
+        )
+        self.events.scheduled_bus_deployment(
+            self.current_step, "route_SN_J15",
+            stops=["busStop_J15_North"],
+            line_name="103_SN", interval_steps=210
+        )
+
+    def _generate_traffic(self):
+        #load all roads
+        if not self.events.available_routes:
+            self.events.find_routes()
+        #go through all roads
+        for route_id in self.events.available_routes:
+            self.events.spawn_dynamic_traffic(self.current_step, route_id)
+
+    def _choose_daytime(self, options, hour_step = 720):
+        if options and "target_phase" in options:
+            phase = options["target_phase"]
+
+            if phase == 0:  # Night (00:00 - 05:00)
+                self.current_step = random.randint(0, 5 * hour_step)
+            elif phase == 1:  # Early morning (05:00 - 07:00)
+                self.current_step = random.randint(5 * hour_step, 7 * hour_step)
+            elif phase == 2:  # Morning peak (07:00 - 09:00)
+                self.current_step = random.randint(7 * hour_step, 9 * hour_step)
+            elif phase == 3:  # Day (09:00 - 15:00)
+                self.current_step = random.randint(9 * hour_step, 15 * hour_step)
+            elif phase == 4:  # Afternoon peak (15:00 - 18:00)
+                self.current_step = random.randint(15 * hour_step, 18 * hour_step)
+            elif phase == 5:  # Evening (18:00 - 24:00)
+                self.current_step = random.randint(18 * hour_step, 24 * hour_step)
+        else:
+            # Full random
+            self.current_step = random.randint(0, 17280)

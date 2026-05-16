@@ -28,10 +28,11 @@ class SumoManager:
             "J8": ["E11","-E5","E10","E12"],
             "J15": ["E15","-E12","E14","E13"]
         }
-        self.ped_edges = {
-          "J6":  ["-E4", "E3", "-E5", "-E6"],
-          "J7": ["-E4", "E3", "-E5", "-E6"]
-        }
+        # self.ped_edges = {
+        #     "J6":  ["-E4", "E3", "-E5", "-E6"],
+        #     "J8": ["-E4", "E3", "-E5", "-E6"],
+        #     "J15": []
+        # }
 
 
 
@@ -154,7 +155,7 @@ class SumoManager:
 
     def get_pedestrian_presence(self, junction_id):
         """Simulation of pedestrians buttons on crosswalks, return if they are any pedestrians on the edges"""
-        ped_edges=self.ped_edges[junction_id]
+        ped_edges = self.junction_intake_edges[junction_id]
         presence = []
 
         conn = self.tc.getConnection(self.label) if self.gui else self.tc #dodane
