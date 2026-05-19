@@ -17,19 +17,25 @@ from collections import deque
 from pettingzoo import ParallelEnv  #bedziemy tego uzywac poniewaz biblioteka gymnasiium sama w sobie nie radzi sobie z wieloma agentami wiec musimy ja rozszerzyc
 
 class SumoEnv(ParallelEnv):
+    metadata = {
+        "render_modes": ["human", "rgb_array"],
+        "name": "sumo_krzyzak_v3"
+    }
     def __init__(self,
                  config_path,
                  gui=False, #weather we want to use GUI
                  rank = 0
                  ):
 
+
+
         self.current_step=0
         self.episode_step=0
         self.max_steps = 500
         self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom
 
-        self.posible_agents=["J6", "J8", "J15"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
-        self.agents=self.posible_agents[:]
+        self.possible_agents=["J6", "J8", "J15"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
+        self.agents=self.possible_agents[:]
 
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
         self.events = eventManager(self.sumo)
@@ -42,7 +48,7 @@ class SumoEnv(ParallelEnv):
         #---Step 1: Observation space---
 
         #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
-        self.observation_space ={agent:  spaces.Box(
+        self.observation_spaces ={agent:  spaces.Box(
             low=0,
             high=100,
             shape=(22,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians and 2 for normalized daytime sin and cos
@@ -51,7 +57,7 @@ class SumoEnv(ParallelEnv):
         ) for agent in self.agents} # box is the table of floats, it should be enough for AI to know where traffic is building
         #---Step 2: Action Space---
         # 0: vertical green light, 1: horizontally green light
-        self.action_space = {
+        self.action_spaces = {
             agent: spaces.Discrete(2) for agent in self.agents } #discrete action of possible "two buttons"
         self.last_action ={
             "J6": 0,
@@ -77,6 +83,14 @@ class SumoEnv(ParallelEnv):
         self.allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
         self.green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s
 
+        self.target_phase = None
+        self.render_mode = "human" if self.gui else None
+
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
+
+    def action_space(self, agent):
+        return self.action_spaces[agent]
 
     def reset(self,
               seed=None,
@@ -89,8 +103,11 @@ class SumoEnv(ParallelEnv):
         self.sumo.close_sim() #If there were any simulations running close them.
         self.sumo.start_sim() #Start new simulation
 
+        self.agents = self.possible_agents[:]
+        
         hour_step = 720
-        self._choose_daytime(options,hour_step)
+        phase = self.target_phase
+        self._choose_daytime(options,hour_step=720)
 
         self.episode_step = 0  # Zerujemy stoper epizodu
 
@@ -372,9 +389,12 @@ class SumoEnv(ParallelEnv):
             self.events.spawn_dynamic_traffic(self.current_step, route_id)
 
     def _choose_daytime(self, options, hour_step = 720):
-        if options and "target_phase" in options:
+        phase = self.target_phase
+
+        if phase is None and options and "target_phase" in options:
             phase = options["target_phase"]
 
+        if phase is None:
             if phase == 0:  # Night (00:00 - 05:00)
                 self.current_step = random.randint(0, 5 * hour_step)
             elif phase == 1:  # Early morning (05:00 - 07:00)
@@ -390,3 +410,7 @@ class SumoEnv(ParallelEnv):
         else:
             # Full random
             self.current_step = random.randint(0, 17280)
+
+
+    def set_target_phase(self, phase):
+        self.target_phase = phase
