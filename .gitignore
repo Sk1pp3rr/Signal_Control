@@ -41,6 +41,7 @@ summary.xml
 # Results and models
 results/
 models/*.zip
+ppo_sumo_tensorboard/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
