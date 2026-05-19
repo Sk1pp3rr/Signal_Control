@@ -17,15 +17,17 @@ class CurriculumCallback(BaseCallback):
             new_phase = 0  # night
         elif progress < 0.45:
             new_phase = 3  #Day
+        elif progress < 0.60:
+            new_phase = 4 # afternoon peak
         elif progress < 0.75:
-            new_phase = random.choice([2, 4])  # Peaks
+            new_phase = 2 # morning peak
         else:
-            new_phase = None  # ranodm
+            new_phase = None  # random
 
         if new_phase != self.current_phase:
             self.current_phase = new_phase
             if self.verbose > 0:
-                print(f"\n[CURRICULUM] Zmiana fazy na: {new_phase} (Postęp: {progress:.1%})")
+                print(f"\n[CURRICULUM] Phase: {new_phase} (Progress: {progress:.1%})")
 
             self.raw_env.set_target_phase(new_phase)
 

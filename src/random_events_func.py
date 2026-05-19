@@ -2,78 +2,162 @@ import traci
 import random
 
 from setuptools import Extension
-from sympy.codegen.fnodes import Extent
+from collections import deque
+
+class EventManager:
+    '''Manages random and scheduled simulation events: traffic spawning, bus lines,
+     emergency vehicles, and detector malfunction.'''
+    MALFUNCTION_PROB = 0.0003
+
+    REPAIR_PROB = 0.01
+
+    HOUR_STEP = 720
+
+    TRAFFIC_PROBS = {
+            0: 0.03,
+            1: 0.10,
+            2: 0.30,
+            3: 0.15,
+            4: 0.25,
+            5: 0.10
+    }
 
 
-class eventManager:
     def __init__(self, sumo_env):
         self.env = sumo_env
-        self.available_routes = []
-        self.detector_status = {
+        self.available_routes: list[str] = []
+        self.detector_status: dict[str, list[int]] = {
             "J6": [1,1,1,1],
             "J8": [1,1,1,1],
             "J15": [1,1,1,1]
         } #for every detector we have 4 status we can add more ofc
-        from collections import deque
-        self.history_window = 100
-        self.detector_history = [deque(maxlen = self.history_window) for _ in range(4)]
 
-    """Added two functions for further training like if we would like to train this agent on the base of the whole day with it's own phases
-    for further reality"""
-    def get_time_phase(self,current_step):
-        hour_step = 720
-        day_time = current_step % (24 * hour_step)
+        self.detector_history: list[deque] = [
+            deque(maxlen=100) for _ in range(4)
+        ]
 
-        if day_time < 5 * hour_step: return 0  # Night (00:00 - 05:00)
-        if day_time < 7 * hour_step: return 1  # Early morning (05:00 - 07:00)
-        if day_time < 9 * hour_step: return 2  # Morning peak (07:00 - 09:00)
-        if day_time < 15 * hour_step: return 3  # Day (09:00 - 15:00)
-        if day_time < 18 * hour_step: return 4  # Afternoon peak (15:00 - 18:00)
+    #hellper func
+    @property
+    def _conn(self):
+        return self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
+
+    #Daytime utils
+
+    def get_time_phase(self,current_step) -> int:
+        """Maps a simulation step to a time-of-day phase index (0–5)."""
+        day_time = current_step % (24 * self.HOUR_STEP)
+
+        thresholds = [
+            (5 * self.HOUR_STEP, 0),  # Night (00:00 - 05:00)
+            (7 * self.HOUR_STEP, 1),  # Early morning (05:00 - 07:00)
+            (9 * self.HOUR_STEP, 2),  # Morning peak (07:00 - 09:00)
+            (15 * self.HOUR_STEP, 3),  # Day (09:00 - 15:00)
+            (18 * self.HOUR_STEP, 4)  # Afternoon peak (15:00 - 18:00)
+        ]
+        for threshold, phase in thresholds:
+            if day_time < threshold:
+                return phase
         return 5  # Evening (18:00 - 00:00)
 
-    def spawn_dynamic_traffic(self, current_step, route_id):
-        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
+    def get_normalized_time(self, current_step) -> float:
+        """Returns the fraction of the day elapsed (0.0 – 1.0) for cyclic time encoding."""
+        day_steps = 24 * self.HOUR_STEP
+        return (current_step % day_steps) / day_steps
+
+    #Route discovery
+
+    # makes list of all avaliable routes defined in simulation
+    def find_routes(self) -> None:
+        """Caches all non-internal SUMO routes."""
+        self.available_routes = [
+            r for r in self._conn.route.getIDList()
+            if not r.startswith("!")
+        ]
+
+    #traffic spawning
+
+    def spawn_dynamic_traffic(self, current_step, route_id) -> None:
+        """Spawns passenger cars and occasional heavy trucks based on time of day."""
         phase = self.get_time_phase(current_step)
 
-        # Probability of car spawn dependent on hour
-        probs = {
-            0: 0.03,
-            1: 0.1,
-            2: 0.3,
-            3: 0.15,
-            4: 0.25,
-            5: 0.1
-        }
-
-        if random.random() < probs[phase]:
+        if random.random() < self.TRAFFIC_PROBS[phase]:
             veh_id = f"veh_{current_step}_{route_id}"
             # Using distribution from vTypeDistribution
             try:
                 # Using distribution from vTypeDistribution
-                conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
-            except traci.exceptions.TraCIException as e:
+                self._conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
+            except traci.exceptions.TraCIException:
                 # If car has a problem we don't want SUMO to break
                 pass
 
         # Spawning bigger trucks only in the early morning
         if phase == 1 and random.random() < 0.015:
+            truck_id = f"truck_{current_step}_{route_id}"
             try:
-                conn.vehicle.add(f"truck_{current_step}_{route_id}", route_id, typeID="heavy_truck")
+                self._conn.vehicle.add(truck_id, route_id, typeID="heavy_truck")
             except traci.exceptions.TraCIException:
                 pass
 
-    def get_normalized_time(self, current_step):
-        # assuming 1 step = 5s 24h = 17280 steps
-        day_steps = 17280
-        return (current_step % day_steps) / day_steps
+    def scheduled_bus_deployment(
+            self,
+            current_step: int,
+            route_id: str,
+            stops: list[str] | None = None,
+            line_name: str = "101",
+            interval_steps: int = 100,
+    ) -> None:
+        """Deploys a bus on a fixed schedule with optional stop assignments.
+
+        Args:
+            current_step:   Current simulation step.
+            route_id:       SUMO route ID for the bus.
+            stops:          List of bus stop IDs where the bus should halt.
+            line_name:      Displayed line number (e.g. "101_A").
+            interval_steps: How many steps between successive bus deployments.
+        """
+        if current_step == 0 or current_step % interval_steps != 0:
+            return
+
+        veh_id = f"bus_{line_name}_{current_step}"
+        try:
+            self._conn.vehicle.add(veh_id, route_id, typeID="city_bus")
+            self._conn.vehicle.setLine(veh_id, line_name)
+            for stop_id in (stops or []):
+                self._conn.vehicle.setBusStop(veh_id, stop_id, duration=20)
+        except traci.exceptions.TraCIException:
+            pass
+
+    def emergency_vehicle_deployment(self, probability: float = 0.001) -> None:
+        """Randomly spawns an emergency vehicle (ambulance) on a random route."""
+        if random.random() >= probability:
+            return
+
+        if not self.available_routes:
+            self.find_routes()
+
+        route_id = random.choice(self.available_routes)
+        veh_id = f"emergency_{self._conn.simulation.getTime()}"
+        try:
+            self._conn.vehicle.add(veh_id, route_id, typeID="ambulance")
+            self._conn.vehicle.setColor(veh_id, (255, 0, 0, 255))
+        except Exception as exc:
+            print(f"[EventManager] Failed to spawn emergency vehicle: {exc}")
 
 
-    #makes list of all avaliable routes defined in simulation
-    def find_routes(self):
-        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
-        all_routes = conn.route.getIDList()
-        self.available_routes = [route for route in all_routes if not route.startswith('!')]
-        return
+    #Detector malfunctions
+
+    def detector_malfunction(self) -> None:
+        """Randomly breaks working detectors and repairs broken ones each step."""
+        for agent_id, status_list in self.detector_status.items():
+            for i, status in enumerate(status_list):
+                if status == 1 and random.random() < self.MALFUNCTION_PROB:
+                    self.detector_status[agent_id][i] = 0
+                    print(f"[EventManager] Detector malfunction on {agent_id}, lane {i}")
+                elif status == 0 and random.random() < self.REPAIR_PROB:
+                    self.detector_status[agent_id][i] = 1
+                    print(f"[EventManager] Detector repaired on {agent_id}, lane {i}")
+
+    #unused in actual phase
 
     def collision(self):
         conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
@@ -83,59 +167,3 @@ class eventManager:
         target_lane = random.choice(self.available_routes)
         conn.lane.setDisallowed(target_lane, ["passenger", "bus", "truck"])
         return
-
-    def detector_malfunction(self, probability=0.0005, repair_probability=0.01):
-        for agent_id, status_list in self.detector_status.items():
-            for i in range(len(status_list)):
-                if status_list[i] == 1:
-                    # If detector is working, check if it will be broken
-                    if random.random() < probability:
-                        self.detector_status[agent_id][i] = 0
-                        print(f"!!! DETECTOR has mulfunction on {agent_id}, intake: {i} !!!")
-                else:
-                    # If detector is not working check if it will be repaired
-                    if random.random() < repair_probability:
-                        self.detector_status[agent_id][i] = 1
-                        print(f"--- Detector has been repaired on {agent_id}, intake: {i} ---")
-
-    def emergnecy_vechicle_deployment(self, probability = 0.001):
-        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
-        if random.random() < probability:
-            if not self.available_routes:
-                self.find_routes()
-            # Random choice of lane
-            route_id = random.choice(self.available_routes)
-            veh_id = f"emergency_{conn.simulation.getTime()}"
-
-            try:
-                conn.vehicle.add(veh_id, route_id, typeID="ambulance")
-                conn.vehicle.setColor(veh_id, (255, 0, 0, 255))
-                print(f"Ambulance on route id: {route_id}")
-            except Extension as e:
-                print(f"Error: {e}") #debugging
-        return
-
-    #I know it is not random if it is scheduled, but we ball
-    def scheduled_bus_deployment(self, current_step, route_id,stops = None, line_name="101", interval_steps=100):
-        """
-        It leaves bus in fixed time stamps on track, and gives them stops
-        interval_steps=100 is approx. 8-9 with step duration 5s. We have it 5 or 8, 8 when it changes phases
-        """
-        conn = self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
-        # Check if there is time to deploy the bus
-        if current_step % interval_steps == 0 and current_step > 0:
-            veh_id = f"bus_{line_name}_{current_step}"
-            try:
-                # Using vType form XML file
-                conn.vehicle.add(veh_id, route_id, typeID="city_bus")
-                conn.vehicle.setLine(veh_id, line_name)
-                # If there are any problem with colour: traci.vehicle.setColor(veh_id, (255, 255, 0))
-
-                #Connecting buses with stops
-                if stops:
-                    for stop_id in stops:
-                        conn.vehicle.setBusStop(veh_id, stop_id, duration=20)
-
-            except conn.TraCIException as e:
-                # If there are any issues we don't want to destroy anything
-                pass

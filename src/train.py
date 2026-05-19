@@ -1,78 +1,114 @@
 import os
+from pathlib import Path
+from typing import Tuple
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+from stable_baselines3.common.vec_env import VecEnv, VecMonitor
+import supersuit as ss
+
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
-import supersuit as ss
 
 from SumoCurriculumWrapper import CurriculumCallback
 from env import SumoEnv
 
+# Global Configuration
 
-def make_env(config_path, rank, seed=0):
-    def _init():
-        env = SumoEnv(config_path, gui=False, rank=rank)
-        env.reset(seed=seed + rank)
-        env = Monitor(env)
-        return env
-    set_random_seed(seed)
-    return _init
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = (BASE_DIR / ".." / "maps" / "krzyzak" / "krzyzak.sumocfg").resolve()
+RESULTS_DIR = (BASE_DIR / ".." / "results").resolve()
+TENSORBOARD_LOG_DIR = "./ppo_sumo_tensorboard/"
 
+TOTAL_TIMESTEPS = 2_000_000
+CHECKPOINT_FREQ = 50_000
+PPO_N_STEPS = 2048
+PPO_BATCH_SIZE = 512
 
+# Architectural Components
 
-def train():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-    RESULTS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "results"))
+def prepare_infrastructure() -> None:
+    """Initializes the directory structure required for saving results and logs."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # jeżeli środowisko na wyniki nie istnieje to jest stworzone
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+def setup_environment() -> Tuple[VecEnv, SumoEnv]:
+    """
+        Initializes and vectorizes the SUMO environment, preparing it for
+        assimilation by Stable-Baselines3 algorithms.
 
-    raw_env = SumoEnv(CONFIG_PATH, gui=False)
+        Returns:
+            VecEnv: Optimized environment after applying SuperSuit wrappers.
+            SumoEnv: Raw environment (direct reference for Curriculum Learning).
+        """
+    raw_env = SumoEnv(str(CONFIG_PATH), gui=False)
+
+    # SuperSuit transformation cascade for Parameter Sharing
     env = ss.pettingzoo_env_to_vec_env_v1(raw_env)
-
     env = ss.concat_vec_envs_v1(env, 1, base_class="stable_baselines3")
 
-    env = VecMonitor(env, filename=os.path.join(RESULTS_DIR, "monitor.csv"))
+    # Monitoring layer
+    monitor_path = str(RESULTS_DIR / "monitor.csv")
+    env = VecMonitor(env, filename=monitor_path)
 
-    total_timesteps = 2_000_000
+    return env, raw_env
 
-    # 1. Init of environment
-    #env = SumoEnv(CONFIG_PATH, gui=False)
-    #env = SubprocVecEnv([make_env(CONFIG_PATH, i) for i in range(num_cpu)]    env
-
-    #auto save after 50k steps
+def build_callbacks(raw_env: SumoEnv) -> CallbackList:
+    """Constructs an integrated chain of training callbacks."""
     checkpoint_callback = CheckpointCallback(
-        save_freq=50000,
-        save_path=RESULTS_DIR,
+        save_freq=CHECKPOINT_FREQ,
+        save_path=str(RESULTS_DIR),
         name_prefix="ppo_sumo_model"
     )
 
     curriculum_callback = CurriculumCallback(
-        total_timesteps=total_timesteps,
+        total_timesteps=TOTAL_TIMESTEPS,
         raw_env=raw_env,
-        verbose = 1
+        verbose=1
     )
 
-    callbacks = CallbackList([checkpoint_callback, curriculum_callback])
+    return CallbackList([checkpoint_callback, curriculum_callback])
 
+def initialize_agent(env: VecEnv) -> PPO:
+    """Instantiates and parameterizes the Proximal Policy Optimization model."""
+    return PPO(
+        policy="MlpPolicy",
+        env=env,
+        verbose=1,
+        tensorboard_log=TENSORBOARD_LOG_DIR,
+        n_steps=PPO_N_STEPS,
+        batch_size=PPO_BATCH_SIZE
+    )
 
+# Learning module
 
-    # 2. brain
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_sumo_tensorboard/", n_steps=2048, batch_size=512)
+def train() -> None:
+    """
+    Main function controlling the reinforcement learning process.
+    Integrates the environment, policy, and supervisory callback components.
+    """
+    prepare_infrastructure()
 
-    # 3. Start
-    print("Start training...")
+    print("[SYSTEM] Initializing SUMO simulation instance and vectorizing space...")
+    env, raw_env = setup_environment()
+
+    print("[SYSTEM] Registering asynchronous events (Curriculum & Checkpoints)...")
+    callbacks = build_callbacks(raw_env)
+
+    print("[SYSTEM] Instantiating PPO agent neural network...")
+    model = initialize_agent(env)
+
+    print(f"[SYSTEM] Starting policy optimization process ({TOTAL_TIMESTEPS} steps)...")
     try:
-        model.learn(total_timesteps=total_timesteps, callback=callbacks)
+        model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callbacks)
     except KeyboardInterrupt:
-        print("Training interrupted by user")
+        print("\n[SYSTEM] Process forcefully interrupted by the operator (KeyboardInterrupt).")
+    finally:
+        print("[SYSTEM] Finalization: Saving model and gracefully terminating SUMO processes...")
+        final_model_path = str(RESULTS_DIR / "model_krzyzak_final")
+        model.save(final_model_path)
+        env.close()
+        print(f"[SYSTEM] Operation complete. Model secured at: {final_model_path}")
 
-
-    model.save("model_krzyzak_v4")
-    print("Model saved!")
 
 if __name__ == "__main__":
     train()

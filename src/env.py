@@ -10,407 +10,364 @@ from gymnasium import spaces
 import numpy as np
 import traci
 import random
-from tensorboard.compat.tensorflow_stub.tensor_shape import vector
 import SUMO_manager
-from random_events_func import eventManager
+from random_events_func import EventManager
 from collections import deque
 from pettingzoo import ParallelEnv  #bedziemy tego uzywac poniewaz biblioteka gymnasiium sama w sobie nie radzi sobie z wieloma agentami wiec musimy ja rozszerzyc
 
 class SumoEnv(ParallelEnv):
+    """Multi-agent PettingZoo environment wrapping a SUMO traffic simulation.
+
+        Each agent controls the traffic light phase at one intersection.
+        Observation: [car_counts(4), ambulances(4), buses(4), detector_status(4), pedestrians(4), sin_time, cos_time]
+        Actions: 0 = NS green, 1 = WE green
+        """
+
     metadata = {
-        "render_modes": ["human", "rgb_array"],
+        "render_modes": ["human"],
         "name": "sumo_krzyzak_v3"
     }
-    def __init__(self,
-                 config_path,
-                 gui=False, #weather we want to use GUI
-                 rank = 0
-                 ):
 
+    # Traffic light phase indices (must match NetEdit TLS program)
+    # Correct sequence: NS_GREEN → NS_YELLOW → ALL_RED → WE_GREEN → WE_YELLOW → ALL_RED
+    PHASE_NS_GREEN = 0  # gGrrgGrrrGrG   (active green, NS)
+    PHASE_NS_YELLOW = 1  # yyrryyrrrrrrr  (warning, 3 s)
+    PHASE_ALL_RED_A = 2  # rrrrrrrrrrrr   (safety buffer after NS, 2 s)
+    PHASE_WE_GREEN = 3  # rrgGrrrGGrGr   (active green, WE)
+    PHASE_WE_YELLOW = 4  # rryyrryyrrrr   (warning, 3 s)
+    PHASE_ALL_RED_B = 5  # rrrrrrrrrrrr   (safety buffer after WE, 2 s)
 
+    # Phase durations in seconds
+    YELLOW_DUR = 4.0
+    ALLRED_DUR = 3.0
+    GREEN_DUR = 10.0 # active green time per agent decision step
 
-        self.current_step=0
-        self.episode_step=0
-        self.max_steps = 500
-        self._sim_step = 0.1 #zmienilem spowrotem na 0.1 zeby zapobiec warningom
+    # Reward weights
+    W_HALTING = 1.0  # queued vehicles penalty
+    W_JAM = 0.2  # jam length penalty
+    W_OCC = 0.5  # occupancy penalty
+    W_SWITCH = 2.0  # phase-switch penalty (discourages oscillation)
+    W_BRAKING = 5.0  # emergency braking penalty
+    W_PRIORITY = 1.0  # priority vehicle penalty/reward multiplier
+    W_PED = 0.7  # pedestrian waiting penalty multiplier
 
-        self.possible_agents=["J6", "J8", "J15"] #mozliwi agenci , jesli bedzie wiecej to sie doda poprzez petle
-        self.agents=self.possible_agents[:]
+    # Reward for priority vehicles that passed without waiting
+    REWARD_AMBULANCE_PASS = 20.0
+    REWARD_BUS_PASS = 10.0
 
-        self.sumo = SUMO_manager.SumoManager(config_path, gui, rank = rank) #init of connector between Agent and SUMO
-        self.events = eventManager(self.sumo)
-        self.history_window = 100 #history of the last 100 correct readings
-        self.detector_history = {
-            agent: [deque(maxlen=self.history_window) for _ in range(4)]
-            for agent in self.agents
-        }
-        self.last_action = {agent: 0 for agent in self.agents}
-        #---Step 1: Observation space---
+    # Simulation step length — overwritten from SUMO after start_sim()
+    _DEFAULT_SIM_STEP = 0.1
 
-        #In krzyzak, we have four detectors, every one of them is giving number from 0 to 100
-        self.observation_spaces ={agent:  spaces.Box(
-            low=0,
-            high=100,
-            shape=(22,), #4 place for cars and 4 for ambulances and 4 for buses adn 4 for each detector status and 4 for pedestrians and 2 for normalized daytime sin and cos
-            #it's done for time to be a cycle (avoiding jumps from 1.0 to 0)
-            dtype=np.float32
-        ) for agent in self.agents} # box is the table of floats, it should be enough for AI to know where traffic is building
-        #---Step 2: Action Space---
-        # 0: vertical green light, 1: horizontally green light
-        self.action_spaces = {
-            agent: spaces.Discrete(2) for agent in self.agents } #discrete action of possible "two buttons"
-        self.last_action ={
-            "J6": 0,
-            "J8": 0,
-            "J15": 0
-        }  # last action performed by agent
+    def __init__(self, config_path: str, gui: bool = False, rank: int = 0):
         self.config_path = config_path
         self.gui = gui
+        self.render_mode = "human" if gui else None
 
-        self.YELLOW_DUR = 4
-        self.ALLRED_DUR = 2
-        self.GREEN_DUR = 10
+        self.possible_agents = ["J6", "J8", "J15"]
+        self.agents = self.possible_agents[:]
 
-        self.PHASE_NS_GREEN = 0  # gGrrgGrrrGrG  32s
-        self.PHASE_NS_YELLOW = 1  # yyrryyrrrrrrr  3s
-        self.PHASE_ALL_RED_A = 2  # rrrrrrrrrrrr   2s  (bufor po NS)
-        self.PHASE_WE_GREEN = 3  # rrgGrrrGGrGr  32s
-        self.PHASE_WE_YELLOW = 4  # rryyrryyrrrr   3s
-        self.PHASE_ALL_RED_B = 5  # rrrrrrrrrrrr   2s  (bufor po WE)
+        self.sumo = SUMO_manager.SumoManager(config_path, gui, rank=rank)
+        self.events = EventManager(self.sumo)
 
-        # Time for steps
-        self.yellow_steps = round(self.YELLOW_DUR / self._sim_step)  # 3s
-        self.allred_steps = round(self.ALLRED_DUR / self._sim_step)  # 2s
-        self.green_steps = round(self.GREEN_DUR / self._sim_step)  # 5s
+        self._sim_step = self._DEFAULT_SIM_STEP
+        self._update_step_counts()
 
-        self.target_phase = None
-        self.render_mode = "human" if self.gui else None
+        obs_shape = (23,)  # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 actual phase
+        self.observation_spaces = {
+            agent: spaces.Box(low=-2.0, high=100.0, shape=obs_shape, dtype=np.float32)
+            for agent in self.possible_agents
+        }
+        self.action_spaces = {
+            agent: spaces.Discrete(2)
+            for agent in self.possible_agents
+        }
 
-    def observation_space(self, agent):
+        self.last_action: dict[str, int] = {agent: 0 for agent in self.possible_agents}
+        self.detector_history: dict[str, list[deque]] = {
+            agent: [deque(maxlen=100) for _ in range(4)]
+            for agent in self.possible_agents
+        }
+
+        self.episode_step = 0
+        self.current_step = 0
+        self.max_steps = 500
+        self.target_phase: int | None = None  # set externally by CurriculumCallback
+
+
+    #PettingZoo API
+
+    def observation_space(self, agent: str) -> spaces.Space:
         return self.observation_spaces[agent]
 
-    def action_space(self, agent):
+    def action_space(self, agent: str) -> spaces.Space:
         return self.action_spaces[agent]
 
-    def reset(self,
-              seed=None,
-              options = None
-              ):
+    def reset(self, seed: int | None = None, options: dict | None = None):
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
 
-        self.sumo.close_sim() #If there were any simulations running close them.
-        self.sumo.start_sim() #Start new simulation
+        self.sumo.close_sim()
+        self.sumo.start_sim()
+
+        # Fetch actual simulation step length and recompute loop counts
+        self._sim_step = self.sumo.get_sim_step_duration()
+        self._update_step_counts()
 
         self.agents = self.possible_agents[:]
-        
-        hour_step = 720
-        phase = self.target_phase
-        self._choose_daytime(options,hour_step=720)
-
-        self.episode_step = 0  # Zerujemy stoper epizodu
+        self.episode_step = 0
+        self.current_step = self._initial_step_for_phase(options)
 
         for agent in self.agents:
-            self.last_action[agent]=0
+            self.last_action[agent] = 0
             self.events.detector_status[agent] = [1, 1, 1, 1]
 
-        infos={agent:{} for agent in self.agents}
+        return self._get_observation(), {agent: {} for agent in self.agents}
 
-        return self._get_observation(), infos
-
-    def step(self, action):
-
-        conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
+    def step(self, action: dict[str, int]):
 
         self.current_step += 1
         self.episode_step += 1
-        #step_throughput = 0
 
         # events
-        #Spawning cars in simulation steps to simulate traffic intensity throughout a day
         self._generate_traffic()
-
-        self.events.emergnecy_vechicle_deployment(probability=0.01) #emergency
-
-        #Buses
+        self.events.emergency_vehicle_deployment(probability=0.01) #emergency
         self._generate_buses()
-
-        self.events.detector_malfunction() #tutaj mamy jakas mozliwa
+        self.events.detector_malfunction()
 
         accumulated_priority_penalty = {agent:0 for agent in self.agents} #for every agent
 
+        # --- Yellow phase (only for agents that changed action) ---
         for agent in self.agents:
-            action_changed = action[agent] != self.last_action[agent]  # sprawdza
-            if action_changed:
-                if self.last_action[agent] == 0:
-                   self.sumo.set_traffic_light_phase(agent, self.PHASE_NS_YELLOW)
-                elif self.last_action[agent] == 1:
-                   self.sumo.set_traffic_light_phase(agent, self.PHASE_WE_YELLOW)
+            if action[agent] != self.last_action[agent]:
+                yellow_phase = self.PHASE_NS_YELLOW if self.last_action[agent] == 0 else self.PHASE_WE_YELLOW
+                self.sumo.set_traffic_light_phase(agent, yellow_phase)
 
-        for _ in range(self.yellow_steps):
-            conn.simulationStep()
-
-
-            step_penalties=self._calculate_instant_priority_penalty(self.last_action)
+        for _ in range(self._yellow_steps):
+            self.sumo.simulation_step()
             for agent in self.agents:
-                accumulated_priority_penalty[agent] += step_penalties[agent]
+                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent, self.last_action[agent])
 
+        # --- All-red buffer (only for agents that changed action) ---
         for agent in self.agents:
-            action_changed = action[agent] != self.last_action[agent]  # sprawdza
+            if action[agent] != self.last_action[agent]:
+                allred_phase = self.PHASE_ALL_RED_A if self.last_action[agent] == 0 else self.PHASE_ALL_RED_B
+                self.sumo.set_traffic_light_phase(agent, allred_phase)
 
-            if action_changed:
-               if self.last_action[agent] == 0:
-                   self.sumo.set_traffic_light_phase(agent, self.PHASE_ALL_RED_A)
-               elif self.last_action[agent] == 1:
-                   self.sumo.set_traffic_light_phase(agent, self.PHASE_ALL_RED_B)
-
-
-        for _ in range(self.allred_steps):
-            conn.simulationStep()
-
-            step_penalties=self._calculate_instant_priority_penalty(self.last_action)
+        for _ in range(self._allred_steps):
+            self.sumo.simulation_step()
             for agent in self.agents:
-                accumulated_priority_penalty[agent] += step_penalties[agent]
+                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent,
+                                                                                          self.last_action[agent])
 
-
+        # --- Set new green phase ---
         for agent in self.agents:
-            if action[agent] == 0:
-               self.sumo.set_traffic_light_phase(agent, self.PHASE_NS_GREEN)
-            elif action[agent] == 1:
-                self.sumo.set_traffic_light_phase(agent, self.PHASE_WE_GREEN)
+            green_phase = self.PHASE_NS_GREEN if action[agent] == 0 else self.PHASE_WE_GREEN
+            self.sumo.set_traffic_light_phase(agent, green_phase)
 
-
-        # Active green phase
-        for _ in range(self.green_steps):
-            conn.simulationStep()
-            step_penalties=self._calculate_instant_priority_penalty(action)
+        # --- Active green phase ---
+        for _ in range(self._green_steps):
+            self.sumo.simulation_step()
             for agent in self.agents:
-                accumulated_priority_penalty[agent] += step_penalties[agent]
+                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent, action[agent])
 
+        observations = self._get_observation()
+        rewards = {}
+        terminated = {}
+        truncated = {}
 
-
-
-
-        comb_obs=self._get_observation()
-        reward = {}
-        truncated={}
-        terminated={}
-        infos={agent:{} for agent in self.agents} #dla kazdego
-        #is_simulation_empty = conn.simulation.getMinExpectedNumber() <= 0
         is_simulation_empty = False
-        is_time_up=self.episode_step >= self.max_steps
+        is_time_up = self.episode_step >= self.max_steps
 
         for agent in self.agents:
-            metrics=self.sumo.get_junction_metrics(agent)
-            pasing_bonus=self.sumo.get_gps_status(agent)
-            agent_changed_action = (action[agent] != self.last_action[agent])
-            reward[agent] = self._get_reward(metrics, agent_changed_action, accumulated_priority_penalty[agent], pasing_bonus,agent)
+            metrics = self.sumo.get_junction_metrics(agent)
+            passing_bonus = self.sumo.get_gps_status(agent)
+            action_changed = action[agent] != self.last_action[agent]
+
+            rewards[agent] = self._get_reward(agent, metrics, action_changed,
+                                              accumulated_priority_penalty[agent],
+                                              passing_bonus)
             terminated[agent] = is_simulation_empty
             truncated[agent] = is_time_up
 
-        self.last_action = action
+        self.last_action = dict(action)
 
-        return comb_obs, reward, terminated, truncated, infos
+        return observations, rewards, terminated, truncated, {agent: {} for agent in self.agents}
 
-
-
-
-
-    def _calculate_instant_priority_penalty(self, current_action):
-        """Penalty for every step in Simulation"""
-        penalty_obs={}
-        for agent in self.agents:
-            penalty = 0.0
-            amb_presence = self.sumo.get_veh_presence("ambulance", agent) #
-            bus_presence = self.sumo.get_veh_presence("city_bus", agent)
-
-            for idx in range(4):
-                # Check if there is red in the intake of the junction
-                is_red = not ((idx < 2 and current_action[agent] == 0) or (idx >= 2 and current_action[agent] == 1))
-                if is_red:
-                    if amb_presence[idx]:
-                        penalty -= 2.0
-                    if bus_presence[idx]:
-                        penalty -= 0.6
-            penalty_obs[agent] = penalty
-        return penalty_obs
-
-    #TODO: Implementation of reward for buses and everything with it
-    def _get_reward(self,metrics, action_changed, priority_penalty, passing_bonus,agent):
-        conn = self.sumo.tc.getConnection(self.sumo.label) if self.gui else self.sumo.tc
-        #mathematical evaluation of situation in SUMO
-        hc = 1 #multiplayer of queue_penalty for cars
-        jc = 0.2 #multiplayer of waiting time penalty for cars
-        oc = 0.5
-        pp = 1.0
-        pr = 1.0
-        bc = 5.0
-        ps = 0.7
-
-        emergency_braking_count = conn.simulation.getEmergencyStoppingVehiclesNumber()
-        braking_penalty = emergency_braking_count * bc
-
-        #num of cars in queue
-        halt_penalty = metrics['total_halting']
-        occ_penalty = metrics['occupancy']
-        jam_penalty = metrics['max_jam_length']
-        ped_penalty = self.calculate_ped_penalty(agent)
-
-        #switching penalty to avoid DISCO
-        switch_penalty = 2.0 if action_changed else 0.0
-        prior_reward = 0
-        # rewards for smooth passage
-        for vehicle in passing_bonus:
-            if vehicle['wait'] < 1.0:
-                if vehicle['type'] == "ambulance":
-                    prior_reward += 20
-                elif vehicle['type'] == "city_bus":
-                    prior_reward += 10
-
-        #full penalty
-        reward = -(hc * halt_penalty + jc * jam_penalty + oc * occ_penalty + switch_penalty + braking_penalty) + pp * priority_penalty + pr * prior_reward + ped_penalty * ps
-
-        return float(reward)
-
-    def _get_observation(self):
-        # Status 0 or 1
-
-        observation={}
-        time_of_day = self.events.get_normalized_time(self.current_step)  # agent should know what time of day it is
-
-        sin_time = math.sin(2 * math.pi * time_of_day)
-        cos_time = math.cos(2 * math.pi * time_of_day)
-
-        for agent in self.agents:
-            status = self.events.detector_status[agent]
-            raw_data = self.sumo.get_detector_data(agent)
-
-
-            masked_data = []
-            # if status[i] == 0, put 0 masking
-            for i in range(4):
-                if status[i] == 1:
-                    val = float(raw_data[i])
-                    self.detector_history[agent][i].append(val)
-                    masked_data.append(val)
-                else:
-                    if len(self.detector_history[agent][i]) > 0:
-                        avg = sum(self.detector_history[agent][i])/len(self.detector_history[agent][i])
-                        masked_data.append(float(avg))
-                    else:
-                        masked_data.append(0.0)
-
-            #Rest od the sim
-            ambulances = self.sumo.get_veh_presence(veh_type="ambulance", junction_id=agent)
-            buses = self.sumo.get_veh_presence(veh_type="city_bus", junction_id=agent)
-            pedestrians = self.sumo.get_pedestrian_presence(agent)
-
-            observation[agent] = np.concatenate([masked_data, ambulances, buses, status, pedestrians, [sin_time, cos_time]]).astype(np.float32)
-        # vector
-        return observation
-
-    def close(self):
+    def close(self) -> None:
         self.sumo.close_sim()
 
+    # reward
 
-    def calculate_ped_penalty(self,agent):
-        ped_presence = self.sumo.get_pedestrian_presence(agent)
-        ped_penalty_accumulator = 0
+    def _get_reward(
+            self,
+            agent: str,
+            metrics: dict,
+            action_changed: bool,
+            priority_penalty: float,
+            passing_bonus: list[dict],
+    ) -> float:
+        braking_penalty = self.sumo.get_emergency_stopping_count() * self.W_BRAKING
+        switch_penalty = self.W_SWITCH if action_changed else 0.0
+        ped_penalty = self._pedestrian_penalty(agent)
 
-        for idx, is_waiting in enumerate(ped_presence):
-            if is_waiting:
-                # Check if ped have red
-                is_red_for_ped = ((idx < 2 and self.last_action[agent] == 0) or
-                                  (idx >= 2 and self.last_action[agent] == 1))
-                if is_red_for_ped:
-                    ped_penalty_accumulator -= 1.0
-        return ped_penalty_accumulator
-
-    def _generate_buses(self):
-        # Main lines going through
-        self.events.scheduled_bus_deployment(
-            self.current_step,
-            route_id="route_WE",
-            stops=["busStop_J6_East", "busStop_J15_East"],
-            line_name="100_Express_WE",
-            interval_steps=300
-        )
-        self.events.scheduled_bus_deployment(
-            self.current_step,
-            route_id="route_EW",
-            stops=["busStop_J15_West", "busStop_J6_West"],
-            line_name="100_Express_EW",
-            interval_steps=300
+        priority_reward = sum(
+            self.REWARD_AMBULANCE_PASS if v["type"] == "ambulance" else self.REWARD_BUS_PASS
+            for v in passing_bonus
+            if v["wait"] < 1.0 and v["type"] in {"ambulance", "city_bus"}
         )
 
-        # 2. Local J6 (West)
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_NS_J6",
-            stops=["busStop_J6_South"],
-            line_name="101_NS", interval_steps=200
+        penalty = (
+                self.W_HALTING * metrics["total_halting"]
+                + self.W_JAM * metrics["max_jam_length"]
+                + self.W_OCC * metrics["occupancy"]
+                + switch_penalty
+                + braking_penalty
         )
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_SN_J6",
-            stops=["busStop_J6_North"],
-            line_name="101_SN", interval_steps=210
+        bonus = (
+                self.W_PRIORITY * priority_penalty
+                + self.W_PRIORITY * priority_reward
+                + self.W_PED * ped_penalty
         )
+        return float(bonus - penalty)
 
-        # 3. Local J8 (Middle)
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_NS_J8",
-            stops=["busStop_J8_South"],
-            line_name="102_NS", interval_steps=220
-        )
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_SN_J8",
-            stops=["busStop_J8_North"],
-            line_name="102_SN", interval_steps=230
-        )
+    # Per-step priority penalty (called inside simulation loops)
+    def _instant_priority_penalty(self, agent: str, current_action: int) -> float:
+        """Returns a negative penalty if a priority vehicle is waiting at a red signal."""
+        penalty = 0.0
+        amb_presence = self.sumo.get_veh_presence("ambulance", agent)
+        bus_presence = self.sumo.get_veh_presence("city_bus", agent)
 
-        # 4. Local J15 (East)
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_NS_J15",
-            stops=["busStop_J15_South"],
-            line_name="103_NS", interval_steps=200
-        )
-        self.events.scheduled_bus_deployment(
-            self.current_step, "route_SN_J15",
-            stops=["busStop_J15_North"],
-            line_name="103_SN", interval_steps=210
-        )
+        for idx in range(4):
+            on_green = (idx < 2 and current_action == 0) or (idx >= 2 and current_action == 1)
+            if not on_green:
+                if amb_presence[idx]:
+                    penalty -= 2.0
+                if bus_presence[idx]:
+                    penalty -= 0.6
+        return penalty
 
-    def _generate_traffic(self):
-        #load all roads
+    # observation
+
+    def _get_observation(self) -> dict[str, np.ndarray]:
+        time_of_day = self.events.get_normalized_time(self.current_step)
+        sin_t = math.sin(2 * math.pi * time_of_day)
+        cos_t = math.cos(2 * math.pi * time_of_day)
+
+        observations = {}
+        for agent in self.agents:
+            car_counts = self._masked_detector_data(agent)
+            ambulances = self.sumo.get_veh_presence("ambulance", agent)
+            buses = self.sumo.get_veh_presence("city_bus", agent)
+            status = self.events.detector_status[agent]
+            pedestrians = self.sumo.get_pedestrian_presence(agent)
+
+            current_phase = [float(self.last_action[agent])]
+
+            observations[agent] = np.array(
+                car_counts + ambulances + buses + status + pedestrians + [sin_t, cos_t] + current_phase,
+                dtype=np.float32,
+            )
+        return observations
+
+    def _masked_detector_data(self, agent: str) -> list[float]:
+        """Returns detector readings, substituting rolling average for broken sensors."""
+        raw = self.sumo.get_detector_data(agent)
+        status = self.events.detector_status[agent]
+        result = []
+
+        for i in range(4):
+            if status[i] == 1:
+                val = float(raw[i])
+                self.detector_history[agent][i].append(val)
+                result.append(val)
+            else:
+                history = self.detector_history[agent][i]
+                result.append(sum(history) / len(history) if history else 0.0)
+        return result
+
+    # Pedestrian penalty
+
+    def _pedestrian_penalty(self, agent: str) -> float:
+        """Returns a negative penalty for each pedestrian held at a red crossing.
+
+        Crossing geometry:
+          idx 0,1 = N/S approaches → piesi przechodzą przez jezdnię EW
+                    bezpieczne gdy auta NS jadą (action=0, EW red)
+                    CZERWONE gdy WE zielone (action=1) → on_red gdy action==1
+
+          idx 2,3 = E/W approaches → piesi przechodzą przez jezdnię NS
+                    bezpieczne gdy auta WE jadą (action=1, NS red)
+                    CZERWONE gdy NS zielone (action=0) → on_red gdy action==0
+        """
+        penalty = 0.0
+        last_action = self.last_action[agent]
+
+        for idx, is_waiting in enumerate(self.sumo.get_pedestrian_presence(agent)):
+            if not is_waiting:
+                continue
+            on_red = (idx < 2 and last_action == 1) or (idx >= 2 and last_action == 0)
+            if on_red:
+                penalty -= 1.0
+        return penalty
+
+    # Traffic & bus generation
+
+    def _generate_traffic(self) -> None:
         if not self.events.available_routes:
             self.events.find_routes()
-        #go through all roads
         for route_id in self.events.available_routes:
             self.events.spawn_dynamic_traffic(self.current_step, route_id)
 
-    def _choose_daytime(self, options, hour_step = 720):
-        phase = self.target_phase
+    def _generate_buses(self) -> None:
+        bus_lines = [
+            # (route_id,         stops,                                  line_name,        interval)
+            ("route_WE", ["busStop_J6_East", "busStop_J15_East"], "100_WE", 300),
+            ("route_EW", ["busStop_J15_West", "busStop_J6_West"], "100_EW", 300),
+            ("route_NS_J6", ["busStop_J6_South"], "101_NS", 200),
+            ("route_SN_J6", ["busStop_J6_North"], "101_SN", 210),
+            ("route_NS_J8", ["busStop_J8_South"], "102_NS", 220),
+            ("route_SN_J8", ["busStop_J8_North"], "102_SN", 230),
+            ("route_NS_J15", ["busStop_J15_South"], "103_NS", 200),
+            ("route_SN_J15", ["busStop_J15_North"], "103_SN", 210),
+        ]
+        for route_id, stops, line_name, interval in bus_lines:
+            self.events.scheduled_bus_deployment(
+                self.current_step, route_id, stops=stops,
+                line_name=line_name, interval_steps=interval,
+            )
 
-        if phase is None and options and "target_phase" in options:
-            phase = options["target_phase"]
+    # Curriculum support
 
-        if phase is None:
-            if phase == 0:  # Night (00:00 - 05:00)
-                self.current_step = random.randint(0, 5 * hour_step)
-            elif phase == 1:  # Early morning (05:00 - 07:00)
-                self.current_step = random.randint(5 * hour_step, 7 * hour_step)
-            elif phase == 2:  # Morning peak (07:00 - 09:00)
-                self.current_step = random.randint(7 * hour_step, 9 * hour_step)
-            elif phase == 3:  # Day (09:00 - 15:00)
-                self.current_step = random.randint(9 * hour_step, 15 * hour_step)
-            elif phase == 4:  # Afternoon peak (15:00 - 18:00)
-                self.current_step = random.randint(15 * hour_step, 18 * hour_step)
-            elif phase == 5:  # Evening (18:00 - 24:00)
-                self.current_step = random.randint(18 * hour_step, 24 * hour_step)
-        else:
-            # Full random
-            self.current_step = random.randint(0, 17280)
-
-
-    def set_target_phase(self, phase):
+    def set_target_phase(self, phase: int | None) -> None:
+        """Called by CurriculumCallback to pin the time-of-day phase for training."""
         self.target_phase = phase
+
+    # Internal jelpers
+
+    def _update_step_counts(self) -> None:
+        """Recomputes simulation loop counts from the current step duration."""
+        self._yellow_steps = round(self.YELLOW_DUR / self._sim_step)
+        self._allred_steps = round(self.ALLRED_DUR / self._sim_step)
+        self._green_steps = round(self.GREEN_DUR / self._sim_step)
+
+    def _initial_step_for_phase(self, options: dict | None) -> int:
+        """Returns a starting simulation step matching the curriculum time-of-day phase."""
+        hour = EventManager.HOUR_STEP
+        phase_ranges = {
+            0: (0, 5 * hour),
+            1: (5 * hour, 7 * hour),
+            2: (7 * hour, 9 * hour),
+            3: (9 * hour, 15 * hour),
+            4: (15 * hour, 18 * hour),
+            5: (18 * hour, 24 * hour),
+        }
+        phase = self.target_phase
+        if phase is None and options:
+            phase = options.get("target_phase")
+
+        if phase is not None and phase in phase_ranges:
+            lo, hi = phase_ranges[phase]
+            return random.randint(lo, hi)
+
+        return random.randint(0, 24 * hour)
