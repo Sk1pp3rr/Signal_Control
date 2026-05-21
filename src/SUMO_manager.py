@@ -1,6 +1,7 @@
 import traci
 import libsumo
 from libsumo import junction
+from networkx.classes import neighbors
 
 
 class SumoManager:
@@ -33,6 +34,8 @@ class SumoManager:
         self.label = f"sim_{rank}"
         self.tc = traci if gui else libsumo
         self._sumo_cmd = ["sumo-gui" if gui else "sumo", "-c", config_path, "--start"]
+        self.posible_agents = ["J6", "J8", "J15"]
+        self.agents = self.posible_agents[:]
 
 
     # Internal helpers
@@ -141,3 +144,38 @@ class SumoManager:
     def get_emergency_stopping_count(self) -> int:
         """Returns the number of vehicles performing emergency stops this step."""
         return self._conn.simulation.getEmergencyStoppingVehiclesNumber()
+
+    def check_neighbords(self):
+        neighbors_list={agent:[] for agent in self.agents} #szukujemy sobie slownik sasiadow
+
+        for agent in self.agents:
+            my_edges=self.sumo.JUNCTION_INTAKE_EDGES[agent]
+
+            for edge in my_edges: #dla kazdego takiego edga bedziemy sprawdzac czy znajduje sie w innych
+                for agent_v2 in self.agents:
+                    if edge in self.sumo.JUNCTION_EXIT_EDGES[agent_v2] and agent_v2 != agent:
+                        if agent not in neighbors_list[agent_v2]:
+                            neighbors_list[agent].append(agent_v2)
+
+
+        return neighbors_list
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
