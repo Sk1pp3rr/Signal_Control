@@ -72,7 +72,7 @@ class SumoEnv(ParallelEnv):
         self._sim_step = self._DEFAULT_SIM_STEP
         self._update_step_counts()
 
-        obs_shape = (23,)  # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 actual phase
+        obs_shape = (35,)  # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 actual phase
         self.observation_spaces = {
             agent: spaces.Box(low=-2.0, high=100.0, shape=obs_shape, dtype=np.float32)
             for agent in self.possible_agents
@@ -92,7 +92,7 @@ class SumoEnv(ParallelEnv):
         self.current_step = 0
         self.max_steps = 500
         self.target_phase: int | None = None  # set externally by CurriculumCallback
-
+        self.neighbors_dict = self.sumo.check_neighbords()
 
     #PettingZoo API
 
@@ -261,11 +261,22 @@ class SumoEnv(ParallelEnv):
             buses = self.sumo.get_veh_presence("city_bus", agent)
             status = self.events.detector_status[agent]
             pedestrians = self.sumo.get_pedestrian_presence(agent)
+            neighbor_data=[]
+            my_neighbors=self.neighbors_dict[agent] #pobieramy konkretnych sasiadow
+            for neighbor_id in sorted(my_neighbors.keys()): # pobieramy tylko i wylacznie klucze
+                edge=my_neighbors[neighbor_id] #pobieramy konkretna ulice
+                presence=1.0
+                cars=float(self.sumo.tc.edge.getLastStepVehicleNumber(edge))
+                phase=float(self.last_action[neighbor_id])
+                neighbor_data.extend([presence,cars,phase])
+
+            while len(neighbor_data)<12:
+                neighbor_data.append(0.0)
 
             current_phase = [float(self.last_action[agent])]
 
             observations[agent] = np.array(
-                car_counts + ambulances + buses + status + pedestrians + [sin_t, cos_t] + current_phase,
+                car_counts + ambulances + buses + status + pedestrians + [sin_t, cos_t] + current_phase + neighbor_data,
                 dtype=np.float32,
             )
         return observations
