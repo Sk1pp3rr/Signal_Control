@@ -146,7 +146,7 @@ class SumoManager:
         return self._conn.simulation.getEmergencyStoppingVehiclesNumber()
 
     def check_neighbords(self):
-        neighbors_list={agent:[] for agent in self.agents} #szukujemy sobie slownik sasiadow
+        neighbors_list={agent:{} for agent in self.agents} #szukujemy sobie slownik sasiadow
 
         for agent in self.agents:
             my_edges=self.sumo.JUNCTION_INTAKE_EDGES[agent]
@@ -154,13 +154,38 @@ class SumoManager:
             for edge in my_edges: #dla kazdego takiego edga bedziemy sprawdzac czy znajduje sie w innych
                 for agent_v2 in self.agents:
                     if edge in self.sumo.JUNCTION_EXIT_EDGES[agent_v2] and agent_v2 != agent:
-                        if agent not in neighbors_list[agent_v2]:
-                            neighbors_list[agent].append(agent_v2)
-
-
+                            neighbors_list[agent][agent_v2]=edge
         return neighbors_list
+        #example of neighbors_list:
+        #{'J6': {'J8': 'E3', 'J15': 'E12'}
 
-    
+
+    def get_incoming_vehicles(self, neighbors_list):
+        vehicles={agent : 0 for agent in self.agents} #dla kazdego agenta bedziemy mieli ilsoc aut
+        for agent in neighbors_list: #dla kazdej drogi
+            neighbors=neighbors_list[agent] #pobieramy liste sasiadow
+            cars=0
+            for neighbor, street in neighbors.items():
+                cars += self.sumo.tc.edge.getLastStepVehicleNumber(street)
+
+            vehicles[agent]=cars
+        return vehicles #bedziemy miec slownik ile tutaj zmierza aut do konkretnego detektora
+        #example of vehicles:
+        #{'J6': 1} #tego typu
+
+    def get_phase_neighbor(self, neighbors_list):
+        phases={agent : {} for agent in self.agents}
+        for agent in neighbors_list:
+            neighbors=neighbors_list[agent]
+            for neighbor, street in neighbors.items():
+                phase=self.sumo.tc.trafficlight.getPhase(neighbor)
+                phases[agent][neighbor]=phase
+
+        return phases
+
+
+
+
 
 
 
