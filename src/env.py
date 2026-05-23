@@ -93,6 +93,12 @@ class SumoEnv(ParallelEnv):
         self.max_steps = 500
         self.target_phase: int | None = None  # set externally by CurriculumCallback
         self.neighbors_dict = self.sumo.check_neighbords()
+        self.ordered_neighbors_edges = {}
+        for agent in self.agents:
+            my_neighbors = self.neighbors_dict[agent]
+            self.ordered_neighbors_edges[agent] = [
+                (n_id, my_neighbors[n_id]) for n_id in sorted(my_neighbors.keys())
+            ]
 
     #PettingZoo API
 
@@ -145,8 +151,10 @@ class SumoEnv(ParallelEnv):
 
         for _ in range(self._yellow_steps):
             self.sumo.simulation_step()
-            for agent in self.agents:
-                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent, self.last_action[agent])
+
+        for agent in self.agents:
+            step_penalty=self._instant_priority_penalty(agent, self.last_action[agent])
+            accumulated_priority_penalty[agent] += step_penalty*self._yellow_steps
 
         # --- All-red buffer (only for agents that changed action) ---
         for agent in self.agents:
@@ -156,10 +164,10 @@ class SumoEnv(ParallelEnv):
 
         for _ in range(self._allred_steps):
             self.sumo.simulation_step()
-            for agent in self.agents:
-                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent,
-                                                                                          self.last_action[agent])
 
+        for agent in self.agents:
+            step_penalty=self._instant_priority_penalty(agent, self.last_action[agent])
+            accumulated_priority_penalty[agent] += step_penalty*self._allred_steps
         # --- Set new green phase ---
         for agent in self.agents:
             green_phase = self.PHASE_NS_GREEN if action[agent] == 0 else self.PHASE_WE_GREEN
@@ -168,8 +176,10 @@ class SumoEnv(ParallelEnv):
         # --- Active green phase ---
         for _ in range(self._green_steps):
             self.sumo.simulation_step()
-            for agent in self.agents:
-                accumulated_priority_penalty[agent] += self._instant_priority_penalty(agent, action[agent])
+
+        for agent in self.agents:
+            step_penalty=self._instant_priority_penalty(agent, action[agent])
+            accumulated_priority_penalty[agent] += step_penalty*self._green_steps
 
         observations = self._get_observation()
         rewards = {}
@@ -262,13 +272,10 @@ class SumoEnv(ParallelEnv):
             status = self.events.detector_status[agent]
             pedestrians = self.sumo.get_pedestrian_presence(agent)
             neighbor_data=[]
-            my_neighbors=self.neighbors_dict[agent] #pobieramy konkretnych sasiadow
-            for neighbor_id in sorted(my_neighbors.keys()): # pobieramy tylko i wylacznie klucze
-                edge=my_neighbors[neighbor_id] #pobieramy konkretna ulice
-                presence=1.0
-                cars=float(self.sumo.tc.edge.getLastStepVehicleNumber(edge))
-                phase=float(self.last_action[neighbor_id])
-                neighbor_data.extend([presence,cars,phase])
+            for neighbor_id, edge in self.ordered_neighbors_edges[agent]:
+                cars = float(self.sumo.tc.edge.getLastStepVehicleNumber(edge))
+                phase = float(self.last_action[neighbor_id])
+                neighbor_data.extend([1.0, cars, phase])
 
             while len(neighbor_data)<12:
                 neighbor_data.append(0.0)

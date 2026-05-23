@@ -149,11 +149,11 @@ class SumoManager:
         neighbors_list={agent:{} for agent in self.agents} #szukujemy sobie slownik sasiadow
 
         for agent in self.agents:
-            my_edges=self.sumo.JUNCTION_INTAKE_EDGES[agent]
+            my_edges=self.JUNCTION_INTAKE_EDGES[agent]
 
             for edge in my_edges: #dla kazdego takiego edga bedziemy sprawdzac czy znajduje sie w innych
                 for agent_v2 in self.agents:
-                    if edge in self.sumo.JUNCTION_EXIT_EDGES[agent_v2] and agent_v2 != agent:
+                    if edge in self.JUNCTION_EXIT_EDGES[agent_v2] and agent_v2 != agent:
                             neighbors_list[agent][agent_v2]=edge
         return neighbors_list
         #example of neighbors_list:
