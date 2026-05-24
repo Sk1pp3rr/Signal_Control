@@ -1,0 +1,196 @@
+<routes>
+  <vType id="car" accel="2.6" decel="4.5" length="5"/>
+
+  <route id="route_0_1" edges="-286967103 -53533699"/>
+  <flow id="flow_route_0_1" type="car" begin="0" end="86400" period="44" route="route_0_1"/>
+
+  <route id="route_0_2" edges="-286967103 Kcynska_4out"/>
+  <flow id="flow_route_0_2" type="car" begin="0" end="86400" period="38" route="route_0_2"/>
+
+  <route id="route_0_3" edges="-286967103 -27399957#5"/>
+  <flow id="flow_route_0_3" type="car" begin="0" end="86400" period="30" route="route_0_3"/>
+
+  <route id="route_0_4" edges="-286967103 136687277#2"/>
+  <flow id="flow_route_0_4" type="car" begin="0" end="86400" period="31" route="route_0_4"/>
+
+  <route id="route_0_5" edges="-286967103 180623102#1"/>
+  <flow id="flow_route_0_5" type="car" begin="0" end="86400" period="43" route="route_0_5"/>
+
+  <route id="route_0_6" edges="-286967103 Owsiana_1out"/>
+  <flow id="flow_route_0_6" type="car" begin="0" end="86400" period="23" route="route_0_6"/>
+
+  <route id="route_0_7" edges="-286967103 27398735"/>
+  <flow id="flow_route_0_7" type="car" begin="0" end="86400" period="15" route="route_0_7"/>
+
+  <route id="route_0_8" edges="-286967103 177211203#0"/>
+  <flow id="flow_route_0_8" type="car" begin="0" end="86400" period="23" route="route_0_8"/>
+
+  <route id="route_1_0" edges="27399957#0 Kcynska_2out"/>
+  <flow id="flow_route_1_0" type="car" begin="0" end="86400" period="60" route="route_1_0"/>
+
+  <route id="route_1_2" edges="27399957#0 Kcynska_4out"/>
+  <flow id="flow_route_1_2" type="car" begin="0" end="86400" period="52" route="route_1_2"/>
+
+  <route id="route_1_3" edges="27399957#0 -27399957#5"/>
+  <flow id="flow_route_1_3" type="car" begin="0" end="86400" period="28" route="route_1_3"/>
+
+  <route id="route_1_4" edges="27399957#0 136687277#2"/>
+  <flow id="flow_route_1_4" type="car" begin="0" end="86400" period="19" route="route_1_4"/>
+
+  <route id="route_1_5" edges="27399957#0 180623102#1"/>
+  <flow id="flow_route_1_5" type="car" begin="0" end="86400" period="23" route="route_1_5"/>
+
+  <route id="route_1_6" edges="27399957#0 Owsiana_1out"/>
+  <flow id="flow_route_1_6" type="car" begin="0" end="86400" period="46" route="route_1_6"/>
+
+  <route id="route_1_7" edges="27399957#0 27398735"/>
+  <flow id="flow_route_1_7" type="car" begin="0" end="86400" period="19" route="route_1_7"/>
+
+  <route id="route_1_8" edges="27399957#0 177211203#0"/>
+  <flow id="flow_route_1_8" type="car" begin="0" end="86400" period="44" route="route_1_8"/>
+
+  <route id="route_2_0" edges="53533699 Kcynska_2out"/>
+  <flow id="flow_route_2_0" type="car" begin="0" end="86400" period="54" route="route_2_0"/>
+
+  <route id="route_2_1" edges="53533699 -53533699"/>
+  <flow id="flow_route_2_1" type="car" begin="0" end="86400" period="21" route="route_2_1"/>
+
+  <route id="route_2_3" edges="53533699 -27399957#5"/>
+  <flow id="flow_route_2_3" type="car" begin="0" end="86400" period="55" route="route_2_3"/>
+
+  <route id="route_2_4" edges="53533699 136687277#2"/>
+  <flow id="flow_route_2_4" type="car" begin="0" end="86400" period="26" route="route_2_4"/>
+
+  <route id="route_2_5" edges="53533699 180623102#1"/>
+  <flow id="flow_route_2_5" type="car" begin="0" end="86400" period="30" route="route_2_5"/>
+
+  <route id="route_2_6" edges="53533699 Owsiana_1out"/>
+  <flow id="flow_route_2_6" type="car" begin="0" end="86400" period="16" route="route_2_6"/>
+
+  <route id="route_2_7" edges="53533699 27398735"/>
+  <flow id="flow_route_2_7" type="car" begin="0" end="86400" period="44" route="route_2_7"/>
+
+  <route id="route_2_8" edges="53533699 177211203#0"/>
+  <flow id="flow_route_2_8" type="car" begin="0" end="86400" period="35" route="route_2_8"/>
+
+  <route id="route_3_0" edges="27398644#1 Kcynska_2out"/>
+  <flow id="flow_route_3_0" type="car" begin="0" end="86400" period="28" route="route_3_0"/>
+
+  <route id="route_3_1" edges="27398644#1 -53533699"/>
+  <flow id="flow_route_3_1" type="car" begin="0" end="86400" period="34" route="route_3_1"/>
+
+  <route id="route_3_2" edges="27398644#1 Kcynska_4out"/>
+  <flow id="flow_route_3_2" type="car" begin="0" end="86400" period="19" route="route_3_2"/>
+
+  <route id="route_3_4" edges="27398644#1 136687277#2"/>
+  <flow id="flow_route_3_4" type="car" begin="0" end="86400" period="51" route="route_3_4"/>
+
+  <route id="route_3_5" edges="27398644#1 180623102#1"/>
+  <flow id="flow_route_3_5" type="car" begin="0" end="86400" period="33" route="route_3_5"/>
+
+  <route id="route_3_6" edges="27398644#1 Owsiana_1out"/>
+  <flow id="flow_route_3_6" type="car" begin="0" end="86400" period="57" route="route_3_6"/>
+
+  <route id="route_3_7" edges="27398644#1 27398735"/>
+  <flow id="flow_route_3_7" type="car" begin="0" end="86400" period="59" route="route_3_7"/>
+
+  <route id="route_3_8" edges="27398644#1 177211203#0"/>
+  <flow id="flow_route_3_8" type="car" begin="0" end="86400" period="21" route="route_3_8"/>
+
+  <route id="route_4_0" edges="Kcynska_3in Kcynska_2out"/>
+  <flow id="flow_route_4_0" type="car" begin="0" end="86400" period="26" route="route_4_0"/>
+
+  <route id="route_4_1" edges="Kcynska_3in -53533699"/>
+  <flow id="flow_route_4_1" type="car" begin="0" end="86400" period="40" route="route_4_1"/>
+
+  <route id="route_4_2" edges="Kcynska_3in Kcynska_4out"/>
+  <flow id="flow_route_4_2" type="car" begin="0" end="86400" period="34" route="route_4_2"/>
+
+  <route id="route_4_3" edges="Kcynska_3in -27399957#5"/>
+  <flow id="flow_route_4_3" type="car" begin="0" end="86400" period="33" route="route_4_3"/>
+
+  <route id="route_4_5" edges="Kcynska_3in 180623102#1"/>
+  <flow id="flow_route_4_5" type="car" begin="0" end="86400" period="48" route="route_4_5"/>
+
+  <route id="route_4_6" edges="Kcynska_3in Owsiana_1out"/>
+  <flow id="flow_route_4_6" type="car" begin="0" end="86400" period="35" route="route_4_6"/>
+
+  <route id="route_4_7" edges="Kcynska_3in 27398735"/>
+  <flow id="flow_route_4_7" type="car" begin="0" end="86400" period="55" route="route_4_7"/>
+
+  <route id="route_4_8" edges="Kcynska_3in 177211203#0"/>
+  <flow id="flow_route_4_8" type="car" begin="0" end="86400" period="54" route="route_4_8"/>
+
+  <route id="route_5_0" edges="-177211203#1 Kcynska_2out"/>
+  <flow id="flow_route_5_0" type="car" begin="0" end="86400" period="26" route="route_5_0"/>
+
+  <route id="route_5_1" edges="-177211203#1 -53533699"/>
+  <flow id="flow_route_5_1" type="car" begin="0" end="86400" period="24" route="route_5_1"/>
+
+  <route id="route_5_2" edges="-177211203#1 Kcynska_4out"/>
+  <flow id="flow_route_5_2" type="car" begin="0" end="86400" period="52" route="route_5_2"/>
+
+  <route id="route_5_3" edges="-177211203#1 -27399957#5"/>
+  <flow id="flow_route_5_3" type="car" begin="0" end="86400" period="28" route="route_5_3"/>
+
+  <route id="route_5_4" edges="-177211203#1 136687277#2"/>
+  <flow id="flow_route_5_4" type="car" begin="0" end="86400" period="31" route="route_5_4"/>
+
+  <route id="route_5_6" edges="-177211203#1 Owsiana_1out"/>
+  <flow id="flow_route_5_6" type="car" begin="0" end="86400" period="33" route="route_5_6"/>
+
+  <route id="route_5_7" edges="-177211203#1 27398735"/>
+  <flow id="flow_route_5_7" type="car" begin="0" end="86400" period="27" route="route_5_7"/>
+
+  <route id="route_5_8" edges="-177211203#1 177211203#0"/>
+  <flow id="flow_route_5_8" type="car" begin="0" end="86400" period="17" route="route_5_8"/>
+
+  <route id="route_6_0" edges="169121911#1 Kcynska_2out"/>
+  <flow id="flow_route_6_0" type="car" begin="0" end="86400" period="32" route="route_6_0"/>
+
+  <route id="route_6_1" edges="169121911#1 -53533699"/>
+  <flow id="flow_route_6_1" type="car" begin="0" end="86400" period="39" route="route_6_1"/>
+
+  <route id="route_6_2" edges="169121911#1 Kcynska_4out"/>
+  <flow id="flow_route_6_2" type="car" begin="0" end="86400" period="41" route="route_6_2"/>
+
+  <route id="route_6_3" edges="169121911#1 -27399957#5"/>
+  <flow id="flow_route_6_3" type="car" begin="0" end="86400" period="47" route="route_6_3"/>
+
+  <route id="route_6_4" edges="169121911#1 136687277#2"/>
+  <flow id="flow_route_6_4" type="car" begin="0" end="86400" period="41" route="route_6_4"/>
+
+  <route id="route_6_5" edges="169121911#1 180623102#1"/>
+  <flow id="flow_route_6_5" type="car" begin="0" end="86400" period="28" route="route_6_5"/>
+
+  <route id="route_6_7" edges="169121911#1 27398735"/>
+  <flow id="flow_route_6_7" type="car" begin="0" end="86400" period="45" route="route_6_7"/>
+
+  <route id="route_6_8" edges="169121911#1 177211203#0"/>
+  <flow id="flow_route_6_8" type="car" begin="0" end="86400" period="52" route="route_6_8"/>
+
+  <route id="route_7_0" edges="-27398735 Kcynska_2out"/>
+  <flow id="flow_route_7_0" type="car" begin="0" end="86400" period="31" route="route_7_0"/>
+
+  <route id="route_7_1" edges="-27398735 -53533699"/>
+  <flow id="flow_route_7_1" type="car" begin="0" end="86400" period="46" route="route_7_1"/>
+
+  <route id="route_7_2" edges="-27398735 Kcynska_4out"/>
+  <flow id="flow_route_7_2" type="car" begin="0" end="86400" period="35" route="route_7_2"/>
+
+  <route id="route_7_3" edges="-27398735 -27399957#5"/>
+  <flow id="flow_route_7_3" type="car" begin="0" end="86400" period="52" route="route_7_3"/>
+
+  <route id="route_7_4" edges="-27398735 136687277#2"/>
+  <flow id="flow_route_7_4" type="car" begin="0" end="86400" period="57" route="route_7_4"/>
+
+  <route id="route_7_5" edges="-27398735 180623102#1"/>
+  <flow id="flow_route_7_5" type="car" begin="0" end="86400" period="32" route="route_7_5"/>
+
+  <route id="route_7_6" edges="-27398735 Owsiana_1out"/>
+  <flow id="flow_route_7_6" type="car" begin="0" end="86400" period="28" route="route_7_6"/>
+
+  <route id="route_7_8" edges="-27398735 177211203#0"/>
+  <flow id="flow_route_7_8" type="car" begin="0" end="86400" period="54" route="route_7_8"/>
+
+</routes>

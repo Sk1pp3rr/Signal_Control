@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <route id="route_0" edges="Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095"/>
+    <route id="route_1" edges="Kcynska_2in Kcynska_1out"/>
+    <route id="route_2" edges="Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_3" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609"/>
+    <route id="route_4" edges="Owsiana_2in Owsiana_2out 1228239095 27398735 -27398735 -1228239095"/>
+    <route id="route_5" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_6" edges="Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out"/>
+    <route id="route_7" edges="Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095"/>
+    <route id="route_8" edges="Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_9" edges="Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228"/>
+    <route id="route_10" edges="Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in"/>
+    <route id="route_11" edges="1465735609"/>
+    <route id="route_12" edges="Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_13" edges="Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out"/>
+    <route id="route_14" edges="Owsiana_1in Owsiana_3out"/>
+    <route id="route_15" edges="Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out"/>
+    <route id="route_16" edges="Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095"/>
+    <route id="route_17" edges="Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in"/>
+    <route id="route_18" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_19" edges="1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in"/>
+    <route id="route_20" edges="Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in"/>
+    <route id="route_21" edges="Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_22" edges="Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_23" edges="Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_1out"/>
+    <route id="route_24" edges="350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in"/>
+    <route id="route_25" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out"/>
+    <route id="route_26" edges="Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_27" edges="Zbozowa_3in Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in"/>
+    <route id="route_28" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095"/>
+    <route id="route_29" edges="Kcynska_3out -53533699 53533699 Kcynska_2in"/>
+    <route id="route_30" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_31" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out"/>
+    <route id="route_32" edges="Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in"/>
+    <route id="route_33" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_1out Owsiana_1in Owsiana_2out"/>
+    <route id="route_34" edges="Kcynska_2in Kcynska_1out"/>
+    <route id="route_35" edges="Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_36" edges="Owsiana_4in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_37" edges="Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_38" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_39" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095"/>
+    <route id="route_40" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_41" edges="Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+    <route id="route_42" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in"/>
+    <route id="route_43" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_44" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_45" edges="-1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_46" edges="Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_47" edges="Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out"/>
+    <route id="route_48" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+    <route id="route_49" edges="Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_50" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in"/>
+    <route id="route_51" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_52" edges="Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out"/>
+    <route id="route_53" edges="Owsiana_4in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228"/>
+    <route id="route_54" edges="Zbozowa_2in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_55" edges="Zbozowa_2in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_56" edges="-1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out"/>
+    <route id="route_57" edges="-1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_58" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_2out"/>
+    <route id="route_59" edges="Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095"/>
+    <route id="route_60" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_61" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out"/>
+    <route id="route_62" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in"/>
+    <route id="route_63" edges="Zbozowa_2in Zbozowa_4out 350458228"/>
+    <route id="route_64" edges="Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_3out"/>
+    <route id="route_65" edges="Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_66" edges="Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_67" edges="Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_68" edges="Kcynska_1in Kcynska_3out"/>
+    <route id="route_69" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out"/>
+    <route id="route_70" edges="Owsiana_2in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in"/>
+    <route id="route_71" edges="1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_72" edges="Kcynska_1out"/>
+    <route id="route_73" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out"/>
+    <route id="route_74" edges="Kcynska_1out Zbozowa_1in Zbozowa_3out"/>
+    <route id="route_75" edges="Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095"/>
+    <route id="route_76" edges="Kcynska_1out Zbozowa_1in"/>
+    <route id="route_77" edges="Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228"/>
+    <route id="route_78" edges="Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out"/>
+    <route id="route_79" edges="Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in"/>
+    <route id="route_80" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+    <route id="route_81" edges="Owsiana_2in Owsiana_2out"/>
+    <route id="route_82" edges="Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_83" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609"/>
+    <route id="route_84" edges="Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in"/>
+    <route id="route_85" edges="Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_86" edges="Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+    <route id="route_87" edges="Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in"/>
+    <route id="route_88" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_89" edges="Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_90" edges="Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in Owsiana_2out 1228239095"/>
+    <route id="route_91" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_92" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_93" edges="Zbozowa_3in Zbozowa_4out 350458228"/>
+    <route id="route_94" edges="Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_95" edges="Owsiana_1in Owsiana_2out 1228239095"/>
+    <route id="route_96" edges="Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out"/>
+    <route id="route_97" edges="Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in"/>
+    <route id="route_98" edges="Owsiana_2in"/>
+    <route id="route_99" edges="Zbozowa_4in Zbozowa_4out"/>
+    <route id="route_100" edges="Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_101" edges="350458228 Kcynska_4in Kcynska_3out"/>
+    <route id="route_102" edges="Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_3out"/>
+    <route id="route_103" edges="Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out"/>
+    <route id="route_104" edges="Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in"/>
+    <route id="route_105" edges="350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out"/>
+    <route id="route_106" edges="Owsiana_4in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_107" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609"/>
+    <route id="route_108" edges="Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_109" edges="Owsiana_4in"/>
+    <route id="route_110" edges="Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_111" edges="Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_1out"/>
+    <route id="route_112" edges="Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in"/>
+    <route id="route_113" edges="Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out"/>
+    <route id="route_114" edges="Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_3out -27399957#5 27399957#0 Zbozowa_2in"/>
+    <route id="route_115" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+    <route id="route_116" edges="Zbozowa_4out"/>
+    <route id="route_117" edges="1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out"/>
+    <route id="route_118" edges="Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_119" edges="Zbozowa_3out"/>
+    <route id="route_120" edges="Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228"/>
+    <route id="route_121" edges="Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in"/>
+    <route id="route_122" edges="Owsiana_4in Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_4out"/>
+    <route id="route_123" edges="Owsiana_4out 1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095"/>
+    <route id="route_124" edges="Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_3out"/>
+    <route id="route_125" edges="Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_126" edges="350458228 Kcynska_4in Kcynska_3out -53533699 53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_2out 1228239095 27398735 -27398735 -1228239095 Owsiana_3in Owsiana_4out 1465735609 Zbozowa_4in"/>
+    <route id="route_127" edges="1465735609 Zbozowa_4in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1 -180623102#1 Owsiana_2in"/>
+</routes>

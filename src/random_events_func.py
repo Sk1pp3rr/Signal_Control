@@ -27,9 +27,9 @@ class EventManager:
         self.env = sumo_env
         self.available_routes: list[str] = []
         self.detector_status: dict[str, list[int]] = {
-            "J6": [1,1,1,1],
-            "J8": [1,1,1,1],
-            "J15": [1,1,1,1]
+            "Kcynska": [1,1,1,1],
+            "Zbozowa": [1,1,1,1],
+            "Owsiana": [1,1,1,1]
         } #for every detector we have 4 status we can add more ofc
 
         self.detector_history: list[deque] = [

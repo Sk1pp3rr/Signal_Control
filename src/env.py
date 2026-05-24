@@ -59,27 +59,34 @@ class SumoEnv(ParallelEnv):
     _DEFAULT_SIM_STEP = 0.1
 
     def __init__(self, config_path: str, gui: bool = False, rank: int = 0):
+
         self.config_path = config_path
         self.gui = gui
         self.render_mode = "human" if gui else None
 
-        self.possible_agents = ["J6", "J8", "J15"]
-        self.agents = self.possible_agents[:]
-
         self.sumo = SUMO_manager.SumoManager(config_path, gui, rank=rank)
         self.events = EventManager(self.sumo)
 
+        self.possible_agents = ["Kcynska", "Zbozowa", "Owsiana"]
+        self.agents = self.possible_agents[:]
+
+        self.episode_step = 0
+        self.current_step = 0
+        self.max_steps = 500
+
+
         self._sim_step = self._DEFAULT_SIM_STEP
         self._update_step_counts()
+
 
         obs_shape = (35,)  # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 actual phase
         self.observation_spaces = {
             agent: spaces.Box(low=-2.0, high=100.0, shape=obs_shape, dtype=np.float32)
             for agent in self.possible_agents
         }
+        
         self.action_spaces = {
-            agent: spaces.Discrete(2)
-            for agent in self.possible_agents
+            agent: spaces.Discrete(2) for agent in self.possible_agents
         }
 
         self.last_action: dict[str, int] = {agent: 0 for agent in self.possible_agents}
@@ -88,9 +95,7 @@ class SumoEnv(ParallelEnv):
             for agent in self.possible_agents
         }
 
-        self.episode_step = 0
-        self.current_step = 0
-        self.max_steps = 500
+
         self.target_phase: int | None = None  # set externally by CurriculumCallback
         self.neighbors_dict = self.sumo.check_neighbords()
         self.ordered_neighbors_edges = {}
@@ -113,8 +118,14 @@ class SumoEnv(ParallelEnv):
             random.seed(seed)
             np.random.seed(seed)
 
+
+
         self.sumo.close_sim()
         self.sumo.start_sim()
+
+        self.agent_phase_counts = {
+            agent: self.sumo.get_phase_count(agent) for agent in self.possible_agents
+        }
 
         # Fetch actual simulation step length and recompute loop counts
         self._sim_step = self.sumo.get_sim_step_duration()

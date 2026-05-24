@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-05-24T21:16:52.884679+01:00 by Eclipse SUMO netedit 1.26.0
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <!-- StoppingPlaces -->
+    <busStop id="CisowaSibeliusa01" lane="169121911#1_1" startPos="50.09" endPos="60.09"/>
+    <busStop id="Kcynska01" lane="Kcynska_4in_1" startPos="6.35" endPos="15.51"/>
+    <busStop id="Kcynska02" lane="Kcynska_1out_1" startPos="77.01" endPos="87.01"/>
+    <busStop id="Owsiana01" lane="Owsiana_4out_1" startPos="64.19" endPos="74.19"/>
+    <busStop id="Owsiana02" lane="Owsiana_1out_1" startPos="100.78" endPos="110.78"/>
+    <busStop id="Zbozowa01" lane="350458228_1" startPos="9.67" endPos="19.67"/>
+    <busStop id="Zbozowa02" lane="Zbozowa_1out_1" startPos="57.21" endPos="67.21"/>
+    <!-- Detectors -->
+    <laneAreaDetector id="det_Kcynska_1in_1" lane="Kcynska_1in_1" pos="0.00" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_1in_2" lane="Kcynska_1in_2" pos="0.00" length="99.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_1in_3" lane="Kcynska_1in_3" pos="0.00" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_1in_4" lane="Kcynska_1in_4" pos="0.00" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_2in_1" lane="Kcynska_2in_1" pos="16.37" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_2in_2" lane="Kcynska_2in_2" pos="16.37" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_3in_1" lane="Kcynska_3in_1" pos="253.58" length="59.99" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_4in_1" lane="Kcynska_4in_1" pos="22.06" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_4in_2" lane="Kcynska_4in_2" pos="22.06" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_4in_3" lane="Kcynska_4in_3" pos="22.06" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Kcynska_4in_4" lane="Kcynska_4in_4" pos="22.06" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_1in_1" lane="Owsiana_1in_1" pos="39.17" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_1in_2" lane="Owsiana_1in_2" pos="39.17" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_1in_3" lane="Owsiana_1in_3" pos="39.17" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_1in_4" lane="Owsiana_1in_4" pos="39.17" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_2in_1" lane="Owsiana_2in_1" pos="0.00" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_3in_1" lane="Owsiana_3in_1" pos="2.59" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_3in_2" lane="Owsiana_3in_2" pos="2.59" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_3in_3" lane="Owsiana_3in_3" pos="2.59" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_4in_1" lane="Owsiana_4in_1" pos="47.84" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_4in_2" lane="Owsiana_4in_2" pos="47.84" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Owsiana_4in_3" lane="Owsiana_4in_3" pos="47.84" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_1in_1" lane="Zbozowa_1in_1" pos="28.59" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_1in_2" lane="Zbozowa_1in_2" pos="28.59" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_1in_3" lane="Zbozowa_1in_3" pos="28.59" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_1in_4" lane="Zbozowa_1in_4" pos="28.59" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_2in_1" lane="Zbozowa_2in_1" pos="25.70" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_3in_1" lane="Zbozowa_3in_1" pos="71.25" length="60.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_4in_1" lane="Zbozowa_4in_1" pos="27.42" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_4in_2" lane="Zbozowa_4in_2" pos="27.42" length="100.00" friendlyPos="1" file="out.xml"/>
+    <laneAreaDetector id="det_Zbozowa_4in_3" lane="Zbozowa_4in_3" pos="27.42" length="100.00" friendlyPos="1" file="out.xml"/>
+</additional>
