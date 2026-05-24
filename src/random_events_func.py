@@ -22,6 +22,35 @@ class EventManager:
             5: 0.10
     }
 
+    INTAKES = ["-286967103", "169121911#1", "-27398735", "-177211203#1", "Kcynska_3in", "27398644#1", "53533699",
+                    "27399957#0"]
+    OUTPUTS = ["136687277#2", "180623102#1", "Owsiana_1out", "27398735", "177211203#0", "-27399957#5",
+                    "Kcynska_2out", "Kcynska_4out", "-53533699"]
+    INTAKE_WEIGHTS = {
+        "-286967103": 0.08,
+        "169121911#1": 0.25,
+        "-27398735": 0.08,
+        "27399957#0": 0.04,
+        "-177211203#1": 0.04,
+        "Kcynska_3in": 0.08,
+        "27398644#1": 0.25,
+        "53533699": 0.08
+    }
+
+    OUTPUTS_WEIGHTS = {
+        "136687277#2":0.08,
+        "180623102#1":0.08,
+        "Owsiana_1out":0.25,
+        "27398735":0.08,
+        "177211203#0":0.08,
+        "-27399957#5":0.08,
+        "Kcynska_2out":0.08,
+        "Kcynska_4out":0.25,
+        "-53533699":0.08
+    }
+
+    DEFAULT_WEIGHT = 0.05
+
 
     def __init__(self, sumo_env):
         self.env = sumo_env
@@ -32,13 +61,19 @@ class EventManager:
             "Owsiana": [1,1,1,1]
         } #for every detector we have 4 status we can add more ofc
 
-        self.detector_history: list[deque] = [
-            deque(maxlen=100) for _ in range(4)
-        ]
+        # self.detector_history: list[deque] = [
+        #     deque(maxlen=100) for _ in range(4)
+        # ]
+        self.detector_history: dict[str, list[deque]] = {
+            junction: [deque(maxlen=100) for _ in range(4)]
+            for junction in self.detector_status
+        }
+        self.veh_counter = 0
 
     #hellper func
     @property
     def _conn(self):
+        """Returns the active TraCI / libsumo connection."""
         return self.env.tc.getConnection(self.env.label) if self.env.gui else self.env.tc
 
     #Daytime utils
@@ -66,33 +101,74 @@ class EventManager:
 
     #Route discovery
 
-    # makes list of all avaliable routes defined in simulation
     def find_routes(self) -> None:
-        """Caches all non-internal SUMO routes."""
+        """Loads all pre-defined routes from the running simulation and
+        computes a combined weight for each one.
+
+        Weight = INTAKE_WEIGHTS[first_edge] × OUTPUT_WEIGHTS[last_edge].
+        Edges not present in the weight dicts receive DEFAULT_WEIGHT, so
+        every route participates — just with lower probability.
+        Call this once after start_sim(), then again after each reset.
+        """
         self.available_routes = [
             r for r in self._conn.route.getIDList()
             if not r.startswith("!")
         ]
+        self._build_route_weights()
+
+    def _build_route_weights(self) -> None:
+        """Computes and caches the selection weight for every loaded route."""
+        self._route_weights = {}
+        for route_id in self.available_routes:
+            try:
+                edges = self._conn.route.getEdges(route_id)
+            except Exception:
+                continue
+            if not edges:
+                continue
+            w_in = self.INTAKE_WEIGHTS.get(edges[0], self.DEFAULT_WEIGHT)
+            w_out = self.OUTPUTS_WEIGHTS.get(edges[-1], self.DEFAULT_WEIGHT)
+            self._route_weights[route_id] = w_in * w_out
+
 
     #traffic spawning
 
-    def spawn_dynamic_traffic(self, current_step, route_id) -> None:
-        """Spawns passenger cars and occasional heavy trucks based on time of day."""
+    def spawn_dynamic_traffic(self, current_step: int) -> None:
+        """Spawns one vehicle this step using weighted route selection.
+
+        Selection logic:
+          1. Gate on time-of-day probability (TRAFFIC_PROBS).
+          2. Pick a route with probability of INTAKE_WEIGHTS[start] × OUTPUT_WEIGHTS[end].
+          3. Spawn an urban_cars vehicle on that route.
+          4. During early morning, also attempt to spawn a heavy_truck
+             (small probability, same route).
+
+        No route computation is done here — all routes come from the
+        pre-defined .rou.xml file already loaded by find_routes().
+        """
+        if not self._route_weights:
+            return
+
         phase = self.get_time_phase(current_step)
+        if random.random() >= self.TRAFFIC_PROBS[phase]:
+            return
 
-        if random.random() < self.TRAFFIC_PROBS[phase]:
-            veh_id = f"veh_{current_step}_{route_id}"
-            # Using distribution from vTypeDistribution
-            try:
-                # Using distribution from vTypeDistribution
-                self._conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
-            except traci.exceptions.TraCIException:
-                # If car has a problem we don't want SUMO to break
-                pass
+        route_id = random.choices(
+            list(self._route_weights.keys()),
+            weights=list(self._route_weights.values()),
+            k=1,
+        )[0]
 
-        # Spawning bigger trucks only in the early morning
+        self.veh_counter += 1
+        veh_id = f"veh_{current_step}_{self.veh_counter}"
+        try:
+            self._conn.vehicle.add(veh_id, route_id, typeID="urban_cars")
+        except traci.exceptions.TraCIException:
+            pass
+
+        # Heavy truck: early-morning only, low base probability
         if phase == 1 and random.random() < 0.015:
-            truck_id = f"truck_{current_step}_{route_id}"
+            truck_id = f"truck_{current_step}_{random.randint(0, 9999)}"
             try:
                 self._conn.vehicle.add(truck_id, route_id, typeID="heavy_truck")
             except traci.exceptions.TraCIException:

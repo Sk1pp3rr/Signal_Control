@@ -1,7 +1,7 @@
 <configuration>
     <input>
         <net-file value="czysta_morska_final.net.xml"/>
-    	<route-files value="routes_empty.rou.xml"/>
+    	<route-files value="routes_logical.rou.xml"/>
     	<additional-files value="detectors.add.xml,vehType\urban_drivers.add.xml"/>
     </input>
 

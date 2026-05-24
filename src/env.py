@@ -345,20 +345,17 @@ class SumoEnv(ParallelEnv):
     def _generate_traffic(self) -> None:
         if not self.events.available_routes:
             self.events.find_routes()
-        for route_id in self.events.available_routes:
-            self.events.spawn_dynamic_traffic(self.current_step, route_id)
+
+        spawn_attempts = 10 * len(self.events.INTAKES)
+        for _ in range(spawn_attempts):
+            self.events.spawn_dynamic_traffic(self.current_step)
 
     def _generate_buses(self) -> None:
         bus_lines = [
             # (route_id,         stops,                                  line_name,        interval)
-            ("route_WE", ["busStop_J6_East", "busStop_J15_East"], "100_WE", 300),
-            ("route_EW", ["busStop_J15_West", "busStop_J6_West"], "100_EW", 300),
-            ("route_NS_J6", ["busStop_J6_South"], "101_NS", 200),
-            ("route_SN_J6", ["busStop_J6_North"], "101_SN", 210),
-            ("route_NS_J8", ["busStop_J8_South"], "102_NS", 220),
-            ("route_SN_J8", ["busStop_J8_North"], "102_SN", 230),
-            ("route_NS_J15", ["busStop_J15_South"], "103_NS", 200),
-            ("route_SN_J15", ["busStop_J15_North"], "103_SN", 210),
+            ("route_1b", ["Kcynska02", "Zbozowa02","Owsiana02"], "Bus_A", 200),
+            ("route_2b", ["CisowaSibeliusa01", "Owsiana01","Zbozowa01","Kcynska01"], "Bus_B", 200),
+            ("route_3b", ["Owsiana01", "Zbozowa01","Kcynska01"], "Bus_C", 200),
         ]
         for route_id, stops, line_name, interval in bus_lines:
             self.events.scheduled_bus_deployment(
