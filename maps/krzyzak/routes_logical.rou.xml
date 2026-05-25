@@ -53,7 +53,6 @@
     <route id="route_49" edges="27398644#1 Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0"/>
     <route id="route_50" edges="27398644#1 Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_3out -27399957#5"/>
     <route id="route_51" edges="27398644#1 Kcynska_1in Kcynska_2out"/>
-    <route id="route_52" edges="27398644#1 Kcynska_1in Kcynska_1out Zbozowa_1in Zbozowa_2out 177211203#0 -177211203#1 Zbozowa_3in Zbozowa_4out 350458228 Kcynska_4in Kcynska_4out"/>
     <route id="route_53" edges="27398644#1 Kcynska_1in Kcynska_3out -53533699"/>
     <route id="route_54" edges="53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_3out 136687277#2"/>
     <route id="route_55" edges="53533699 Kcynska_2in Kcynska_1out Zbozowa_1in Zbozowa_1out Owsiana_1in Owsiana_3out 180623102#1"/>
