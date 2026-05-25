@@ -248,9 +248,9 @@ class SumoManager:
             for edge in edges
         }
 
-        result: dict[str, dict[str, str]] = {junc: {} for junc in self.possible_agents}
+        result: dict[str, dict[str, str]] = {junc: {} for junc in self.agents}
 
-        for junc in self.possible_agents:
+        for junc in self.agents:
             visited: set[str] = set(self.JUNCTION_EXIT_EDGES[junc])
             queue: list[str] = list(self.JUNCTION_EXIT_EDGES[junc])
 
