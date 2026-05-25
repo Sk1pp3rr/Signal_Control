@@ -27,6 +27,26 @@ class SumoManager:
 
     PRIORITY_VEHICLE_TYPES = {"ambulance", "city_bus", "police", "fire_truck"}
 
+    #random setup (we can change it later, but is needed for function)
+    INTERSECTION_CONFIGS={
+        "Kcynska":{
+            "num_phases": 9,
+            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
+            "has_left_turn": True
+        },
+        "Zbozowa":{
+            "num_phases": 9,
+            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
+            "has_left_turn": True
+
+        },
+        "Owsiana":{
+            "num_phases": 9,
+            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
+            "has_left_turn":True
+        }
+    }
+
 
     def __init__(self, config_path: str, gui: bool = False, rank: int = 0):
         self.config_path = config_path
@@ -75,10 +95,26 @@ class SumoManager:
         """Sets the traffic light program phase using the mapped cluster ID."""
         # Używamy junction_id (np. "Kcynska") do pobrania ID klastra z XMLa
         real_tl_id = self.TL_IDS.get(junction_id)
-        if real_tl_id:
-            self._conn.trafficlight.setPhase(real_tl_id, phase)
-        else:
+        if not real_tl_id:
             print(f"[ERROR] Junction ID '{junction_id}' not found in TL_IDS!")
+            return
+
+        self._conn.trafficlight.setPhase(real_tl_id, phase)
+
+        try:
+            config=self.INTERSECTION_CONFIGS[junction_id]
+            custom_duration=config["phase_length"][phase]
+
+            self._conn.trafficlight.setPhaseDuration(real_tl_id, custom_duration)
+
+        except KeyError:
+            print("Warning -> No config for this intersection. Using default values.")
+        except IndexError:
+            print(f"Error-> {junction_id}  has not phase {phase}")
+
+
+
+
 
     def get_phase_count(self, junction_id: str) -> int:
         """Num of phase using self._conn and TL_IDS."""
@@ -198,6 +234,7 @@ class SumoManager:
         return neighbors_list
         #example of neighbors_list:
         #{'J6': {'J8': 'E3', 'J15': 'E12'}
+
 
 
 
