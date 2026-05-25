@@ -30,20 +30,17 @@ class SumoManager:
     #random setup (we can change it later, but is needed for function)
     INTERSECTION_CONFIGS={
         "Kcynska":{
-            "num_phases": 9,
-            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
-            "has_left_turn": True
+            "num_phases": 10,
+            "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
         },
         "Zbozowa":{
             "num_phases": 9,
-            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
-            "has_left_turn": True
+            "phase_length": [32, 5, 3, 6, 3, 1, 32, 5, 3],
 
         },
         "Owsiana":{
-            "num_phases": 9,
-            "phase_length": [25, 4, 15, 4, 25, 4, 10, 4, 5],
-            "has_left_turn":True
+            "num_phases": 10,
+            "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
         }
     }
 
