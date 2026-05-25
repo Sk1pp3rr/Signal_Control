@@ -1,57 +1,144 @@
 import os
+import time
 from stable_baselines3 import PPO
+import supersuit as ss
 from env import SumoEnv
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
+MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "models", "model_krzyzak_v4.zip"))
+
+TEST_PHASE = 3
+TEST_STEPS = 500
+
+
+def prepare_wrapped_env(target_phase=None):
+    raw_env = SumoEnv(CONFIG_PATH, gui=True)
+    if target_phase is not None:
+        raw_env.set_target_phase(target_phase)
+
+    env = ss.pettingzoo_env_to_vec_env_v1(raw_env)
+    env = ss.concat_vec_envs_v1(env, 1, base_class="stable_baselines3")
+    return env
 
 
 def test_trained_agent():
-    # 1. Paths to files
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    #MODEL_PATH = os.path.dirname(os.path.join(BASE_DIR, "..","results","ppo_sumo_model_100000_steps.zip"))
-    CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-    MODEL_PATH = os.path.join(BASE_DIR, "../models/model_krzyzak_v4.zip")
+    print("\n" + "=" * 50)
+    print("Our Agent")
+    print("=" * 50)
 
-    # 2. Init from GUI
-    # gui=True, to watch the agent
-    env = SumoEnv(CONFIG_PATH, gui=True)
-
-    # 3. Loading trained model
-    if not os.path.exists(MODEL_PATH):
+    if not os.path.exists(MODEL_PATH) and not os.path.exists(MODEL_PATH + ".zip"):
         print(f"Error: no model found in: {MODEL_PATH}")
-        return
+        return 0
 
     model = PPO.load(MODEL_PATH)
     print("Loaded successfully!")
 
-    # 4. Test loop
-    obs, info = env.reset()
+    env = prepare_wrapped_env(TEST_PHASE)
+    obs = env.reset()
     total_reward = 0
 
-    print("test start...")
+    print("start testing our agent...")
 
     try:
-        for i in range(500):
-            # Prediction of the best possible action
+        for i in range(TEST_STEPS):
             action, _states = model.predict(obs, deterministic=True)
 
-            # performing action in SUMO
-            obs, reward, terminated, truncated, info = env.step(action)
-            total_reward += reward
+            obs, rewards, dones, infos = env.step(action)
+            total_reward += sum(rewards)
 
-            if i % 50 == 0:
-                print(f"Step {i}: Cumulated reward= {total_reward:.2f}")
-
-            if terminated or truncated:
-                print("The END.")
-                break
+            if i > 0 and i % 50 == 0:
+                print(f"Step {i:03d} | total reward = {total_reward:.2f}")
 
     except Exception as e:
         print(f"Error during test: {e}")
 
     finally:
-        print(f"Final result: {total_reward:.2f}")
-        input("press ENTER to continue...")
+        print(f"Total score of our agent: {total_reward:.2f}")
         env.close()
+
+    return total_reward
+
+
+def test_random_agent():
+    print("\n" + "=" * 50)
+    print("Random Agent")
+    print("=" * 50)
+
+    env = prepare_wrapped_env(TEST_PHASE)
+    obs = env.reset()
+    total_reward = 0
+
+    print("start testing random agent...")
+
+    try:
+        for i in range(TEST_STEPS):
+            action = [env.action_space.sample() for _ in range(env.num_envs)]
+
+            obs, rewards, dones, infos = env.step(action)
+            total_reward += sum(rewards)
+
+            if i > 0 and i % 50 == 0:
+                print(f"Step {i:03d} | total reward = {total_reward:.2f}")
+
+    except Exception as e:
+        print(f"Error during test: {e}")
+
+    finally:
+        print(f"Total score of random agent: {total_reward:.2f}")
+        env.close()
+
+    return total_reward
+
+
+def test_fixed_time_agent():
+    print("\n" + "=" * 50)
+    print("fixed time agent")
+    print("=" * 50)
+
+    env = prepare_wrapped_env(TEST_PHASE)
+    obs = env.reset()
+    total_reward = 0
+
+    STEPS_PER_PHASE = 8
+
+    print("start testing fixed time agent...")
+
+    try:
+        for step in range(TEST_STEPS):
+            current_action = (step // STEPS_PER_PHASE) % 2
+            action = [current_action for _ in range(env.num_envs)]
+
+            obs, rewards, dones, infos = env.step(action)
+            total_reward += sum(rewards)
+
+            if step > 0 and step % 50 == 0:
+                print(f"Step {step:03d} | total reward = {total_reward:.2f}")
+
+    except Exception as e:
+        print(f"Error during test: {e}")
+
+    finally:
+        print(f"Total score of fixed-time agent: {total_reward:.2f}")
+        env.close()
+
+    return total_reward
 
 
 if __name__ == "__main__":
-    test_trained_agent()
+    score_random = test_random_agent()
+    time.sleep(2)
+
+    score_fixed = test_fixed_time_agent()
+    time.sleep(2)
+
+    score_ai = test_trained_agent()
+
+    print("The Results: (Random vs Fixed vs AI)")
+    print(f"Random Agent:   {score_random:.2f} pkt")
+    print(f"Fixed time Agent:     {score_fixed:.2f} pkt")
+    print(f"Our Agent :) :         {score_ai:.2f} pkt")
+    if score_ai>score_fixed and score_ai>score_random:
+        print("Our agent is the best!")
+    else:
+        print("Our agent is not the best :(")
