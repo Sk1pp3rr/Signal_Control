@@ -218,19 +218,64 @@ class SumoManager:
         """Returns the number of vehicles performing emergency stops this step."""
         return self._conn.simulation.getEmergencyStoppingVehiclesNumber()
 
-    def check_neighbords(self):
-        neighbors_list={agent:{} for agent in self.agents} #szukujemy sobie slownik sasiadow
+    def check_neighbors(self) -> dict[str, dict[str, str]]:
+        """Wykrywa sąsiednie skrzyżowania przez BFS po grafie krawędzi.
 
-        for agent in self.agents:
-            my_edges=self.JUNCTION_INTAKE_EDGES[agent]
+        Problem ze starym kodem: sprawdzał czy Kcynska_1out ∈ EXIT[Zbozowa],
+        ale to dwie różne krawędzie połączone tylko przez wspólny węzeł pośredni.
 
-            for edge in my_edges: #dla kazdego takiego edga bedziemy sprawdzac czy znajduje sie w innych
-                for agent_v2 in self.agents:
-                    if edge in self.JUNCTION_EXIT_EDGES[agent_v2] and agent_v2 != agent:
-                            neighbors_list[agent][agent_v2]=edge
-        return neighbors_list
-        #example of neighbors_list:
-        #{'J6': {'J8': 'E3', 'J15': 'E12'}
+        BFS rozwiązuje to przez:
+          1. Budowę mapy węzeł → wychodzące krawędzie (z TraCI, raz na start_sim)
+          2. Dla każdego skrzyżowania: BFS od jego krawędzi wyjściowych
+          3. Gdy BFS natrafi na intake innego skrzyżowania → sąsiad znaleziony
+
+        Zwraca: {junction: {neighbor: intake_edge_of_neighbor}}
+        intake_edge_of_neighbor to krawędź tuż przed sąsiadem — idealna
+        do monitorowania przepustowości między węzłami.
+        """
+        # Buduj graf: węzeł → [krawędzie wychodzące z tego węzła]
+        node_to_outgoing: dict[str, list[str]] = {}
+        for edge_id in self._conn.edge.getIDList():
+            if edge_id.startswith(":"):  # pomiń wewnętrzne krawędzie SUMO
+                continue
+            from_node = self._conn.edge.getFromJunction(edge_id)
+            node_to_outgoing.setdefault(from_node, []).append(edge_id)
+
+        # Płaski słownik: intake_edge → junction_id  (do szybkiego sprawdzenia w BFS)
+        intake_of: dict[str, str] = {
+            edge: junc
+            for junc, edges in self.JUNCTION_INTAKE_EDGES.items()
+            for edge in edges
+        }
+
+        result: dict[str, dict[str, str]] = {junc: {} for junc in self.possible_agents}
+
+        for junc in self.possible_agents:
+            visited: set[str] = set(self.JUNCTION_EXIT_EDGES[junc])
+            queue: list[str] = list(self.JUNCTION_EXIT_EDGES[junc])
+
+            while queue:
+                edge = queue.pop(0)
+                to_node = self._conn.edge.getToJunction(edge)
+
+                for next_edge in node_to_outgoing.get(to_node, []):
+                    if next_edge in visited:
+                        continue
+                    visited.add(next_edge)
+
+                    neighbor = intake_of.get(next_edge)
+                    if neighbor is not None and neighbor != junc:
+                        # Znalazłeś intake sąsiada — zapisz i nie idź dalej przez to skrzyżowanie
+                        result[junc][neighbor] = next_edge
+                    else:
+                        # Krawędź pośrednia — dodaj do kolejki BFS
+                        queue.append(next_edge)
+
+        return result
+        # Przykład wyniku:
+        # {'Kcynska': {'Zbozowa': 'Zbozowa_1in'},
+        #  'Zbozowa': {'Kcynska': 'Kcynska_Xin', 'Owsiana': 'Owsiana_1in'},
+        #  'Owsiana': {'Zbozowa': 'Zbozowa_Xin'}}
 
 
 
