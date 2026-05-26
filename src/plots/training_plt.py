@@ -1,8 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-CSV_FILE_PATH = "krzyzak_v4.csv"
-OUTPUT_IMAGE = "wykresy_treningu.png"
+CSV_FILE_PATH = "monitor.csv"
+OUTPUT_IMAGE = "wykresy_treningu123.png"
 
 
 def plot_tensorboard_data():

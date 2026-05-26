@@ -3,6 +3,8 @@
 # Agent does not have control on individual lights but only on phases defined in SUMO!!!
 # Step 3: Cycle logic: Get action from AI (e.g. Agent chooses 0) -> Send command to SUMO by TraCI -> Do jump in time e.g. 5s -> check sensors -> Get the reward
 # Step 4: Reward func for start kindergarden this will probably work: -(sum of cars in congestions on all detectors), Agent will try to minimalize his punishment
+from __future__ import annotations
+
 import math
 
 import gymnasium as gym

@@ -3,10 +3,11 @@ import time
 from stable_baselines3 import PPO
 import supersuit as ss
 from env import SumoEnv
+import matplotlib.pyplot as plt
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "models", "model_krzyzak_v4.zip"))
+MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "results", "model_krzyzak_final.zip"))
 
 TEST_PHASE = 3
 TEST_STEPS = 500
@@ -142,3 +143,17 @@ if __name__ == "__main__":
         print("Our agent is the best!")
     else:
         print("Our agent is not the best :(")
+
+    kategorie=['Our_Agent', 'Fixed_Agent', 'Random_Agent']
+    wartosci=[score_ai, score_fixed, score_random]
+
+    plt.bar(kategorie, wartosci)
+
+    plt.title("Performance Comparison of Traffic Light Control Agents")
+    plt.xlabel("Agents")
+    plt.ylabel("Performance")
+    plt.savefig("Agents_score.png", dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+
