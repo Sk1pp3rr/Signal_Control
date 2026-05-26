@@ -9,8 +9,8 @@ class SumoManager:
 
     TL_IDS = {
         "Kcynska": "cluster1876650944_300760980",
-        "Zbozowa": "cluster300760946_300760949_300760970_300760977",
-        "Owsiana": "cluster12708301500_12708314102_1309390847_1876644683_#2more"
+        "Zbozowa": "cluster12708301500_12708314102_1309390847_1876644683_#2more",
+        "Owsiana": "cluster300760946_300760949_300760970_300760977"
     }
 
     JUNCTION_INTAKE_EDGES = {
@@ -27,20 +27,31 @@ class SumoManager:
 
     PRIORITY_VEHICLE_TYPES = {"ambulance", "city_bus", "police", "fire_truck"}
 
-    #random setup (we can change it later, but is needed for function)
+    TARGET_GREEN_PHASES = {
+        "Kcynska": {0: 0, 1: 5},
+        "Zbozowa": {0: 0, 1: 6},
+        "Owsiana": {0: 0, 1: 5}
+    }
+
+    # FIX #1: Dodano "group_starts" do każdego skrzyżowania.
+    # group_starts[akcja] = indeks fazy zielonej dla danej akcji (0=NS, 1=WE).
+    # trans_start = group_starts[akcja] + 1 to faza przejściowa (żółta/all-red).
+    # Wartości muszą zgadzać się z programem TLS w pliku XML SUMO!
     INTERSECTION_CONFIGS = {
         "Kcynska": {
             "num_phases": 10,
             "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
+            "group_starts": {0: 0, 1: 5},  # akcja 0 → faza 0 (NS green), akcja 1 → faza 5 (WE green)
         },
         "Zbozowa": {
             "num_phases": 9,
             "phase_length": [32, 5, 3, 6, 3, 1, 32, 5, 3],
-
+            "group_starts": {0: 0, 1: 6},  # akcja 0 → faza 0 (NS green), akcja 1 → faza 6 (WE green)
         },
         "Owsiana": {
             "num_phases": 10,
             "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
+            "group_starts": {0: 0, 1: 5},  # akcja 0 → faza 0 (NS green), akcja 1 → faza 5 (WE green)
         }
     }
 
@@ -71,6 +82,19 @@ class SumoManager:
         else:
             self.tc.start(self._sumo_cmd)
 
+        # --- Agresywny RAM Cache detektorów ---
+        all_dets = set(self._conn.lanearea.getIDList())
+        self.detector_cache = {}
+        for j_id in self.agents:  # Używamy self.agents (posible_agents)
+            self.detector_cache[j_id] = {}
+            for wlot in ["1in", "2in", "3in", "4in"]:
+                valid_list = []
+                for lane_idx in range(1, 5):
+                    det_id = f"det_{j_id}_{wlot}_{lane_idx}"
+                    if det_id in all_dets:
+                        valid_list.append(det_id)
+                self.detector_cache[j_id][wlot] = valid_list
+
     def close_sim(self):
         """Closes the running SUMO simulation, ignoring errors if already closed."""
         try:
@@ -87,10 +111,28 @@ class SumoManager:
         return self._conn.simulation.getDeltaT()
 
     # Traffic light control
+    def get_current_phase(self, junction_id: str) -> int:
+        """Zwraca obecny indeks fazy dla danego skrzyżowania."""
+        real_tl_id = self.TL_IDS.get(junction_id)
+        return self._conn.trafficlight.getPhase(real_tl_id)
+
+    def advance_to_next_phase(self, junction_id: str) -> None:
+        """Popycha program świateł o jedną fazę do przodu i ustawia jej czas z konfigu."""
+        real_tl_id = self.TL_IDS.get(junction_id)
+        current_phase = self._conn.trafficlight.getPhase(real_tl_id)
+        max_phases = self.get_phase_count(junction_id)
+
+        next_phase = (current_phase + 1) % max_phases
+        self._conn.trafficlight.setPhase(real_tl_id, next_phase)
+
+        try:
+            duration = self.INTERSECTION_CONFIGS[junction_id]["phase_length"][next_phase]
+            self._conn.trafficlight.setPhaseDuration(real_tl_id, float(duration))
+        except (KeyError, IndexError):
+            pass
 
     def set_traffic_light_phase(self, junction_id: str, phase: int) -> None:
         """Sets the traffic light program phase using the mapped cluster ID."""
-        # Używamy junction_id (np. "Kcynska") do pobrania ID klastra z XMLa
         real_tl_id = self.TL_IDS.get(junction_id)
         if not real_tl_id:
             print(f"[ERROR] Junction ID '{junction_id}' not found in TL_IDS!")
@@ -99,19 +141,13 @@ class SumoManager:
         self._conn.trafficlight.setPhase(real_tl_id, phase)
 
         try:
-            config=self.INTERSECTION_CONFIGS[junction_id]
-            custom_duration=config["phase_length"][phase]
-
+            config = self.INTERSECTION_CONFIGS[junction_id]
+            custom_duration = config["phase_length"][phase]
             self._conn.trafficlight.setPhaseDuration(real_tl_id, custom_duration)
-
         except KeyError:
             print("Warning -> No config for this intersection. Using default values.")
         except IndexError:
-            print(f"Error-> {junction_id}  has not phase {phase}")
-
-
-
-
+            print(f"Error-> {junction_id} has not phase {phase}")
 
     def get_phase_count(self, junction_id: str) -> int:
         """Num of phase using self._conn and TL_IDS."""
@@ -129,20 +165,14 @@ class SumoManager:
     def _get_aggregated_metric(self, junction_id: str, wlot: str, traci_func) -> float:
         """Sums data from detectors in one lane (except pedestrian line _0)"""
         total = 0.0
-        for lane_idx in range(1, 5):  # Check if lanes exists from _1 to _4
-            det_id = f"det_{junction_id}_{wlot}_{lane_idx}"
-            try:
-                if det_id in self._conn.lanearea.getIDList():
-                    total += traci_func(det_id)
-            except Exception:
-                # No more lanes
-                break
+        for det_id in self.detector_cache[junction_id][wlot]:
+            total += traci_func(det_id)
         return total
 
     def get_detector_data(self, junction_id: str) -> list[int]:
         """Returns vehicle counts per detector lane: e.g. [3, 2, 0, 5]."""
         return [
-            int(self._get_aggregated_metric(junction_id,intake, self._conn.lanearea.getLastStepVehicleNumber))
+            int(self._get_aggregated_metric(junction_id, intake, self._conn.lanearea.getLastStepVehicleNumber))
             for intake in ["1in", "2in", "3in", "4in"]
         ]
 
@@ -158,45 +188,40 @@ class SumoManager:
     def get_veh_presence(self, veh_type: str, junction_id: str) -> list[int]:
         """Returns a binary presence vector [0/1] per detector lane for the given vehicle type."""
         presence = [0, 0, 0, 0]
+        veh_prefix = "emergency" if veh_type == "ambulance" else "bus"
+
         for idx, intake in enumerate(["1in", "2in", "3in", "4in"]):
-            for lane_idx in range(1, 5):
-                det_id = f"det_{junction_id}_{intake}_{lane_idx}"
-                try:
-                    for veh_id in self._conn.lanearea.getLastStepVehicleIDs(det_id):
-                        if self._conn.vehicle.getTypeID(veh_id) == veh_type:
-                            presence[idx] = 1
-                            break
-                    if presence[idx] == 1:
+            for det_id in self.detector_cache[junction_id][intake]:
+                for veh_id in self._conn.lanearea.getLastStepVehicleIDs(det_id):
+                    if veh_prefix in veh_id:
+                        presence[idx] = 1
                         break
-                except Exception:
+                if presence[idx] == 1:
                     break
         return presence
 
     def get_gps_status(self, junction_id: str) -> list[dict]:
-        """Returns priority vehicles (ambulance, bus, etc.) that recently passed the junction.
-
-        Simulates GPS integration: checks exit edges for low-distance vehicles,
-        returning their type and accumulated waiting time.
-        """
         passed_priority = []
         for edge_id in self.JUNCTION_EXIT_EDGES[junction_id]:
             for veh_id in self._conn.edge.getLastStepVehicleIDs(edge_id):
+                is_amb = "emergency" in veh_id
+                is_bus = "bus" in veh_id
+
+                if not (is_amb or is_bus):
+                    continue
+
                 if self._conn.vehicle.getDistance(veh_id) >= 10.0:
                     continue
-                veh_type = self._conn.vehicle.getTypeID(veh_id)
-                if veh_type in self.PRIORITY_VEHICLE_TYPES:
-                    passed_priority.append({
-                        "id": veh_id,
-                        "type": veh_type,
-                        "wait": self._conn.vehicle.getWaitingTime(veh_id),
-                    })
+
+                passed_priority.append({
+                    "id": veh_id,
+                    "type": "ambulance" if is_amb else "city_bus",
+                    "wait": self._conn.vehicle.getWaitingTime(veh_id),
+                })
         return passed_priority
 
     def get_pedestrian_presence(self, junction_id: str) -> list[float]:
-        """Returns a binary presence vector [0.0/1.0] per intake edge for pedestrians.
-
-        Simulates pedestrian crossing request buttons.
-        """
+        """Returns a binary presence vector [0.0/1.0] per intake edge for pedestrians."""
         presence = []
         for edge in self.JUNCTION_INTAKE_EDGES[junction_id]:
             try:
@@ -219,29 +244,14 @@ class SumoManager:
         return self._conn.simulation.getEmergencyStoppingVehiclesNumber()
 
     def check_neighbors(self) -> dict[str, dict[str, str]]:
-        """Wykrywa sąsiednie skrzyżowania przez BFS po grafie krawędzi.
-
-        Problem ze starym kodem: sprawdzał czy Kcynska_1out ∈ EXIT[Zbozowa],
-        ale to dwie różne krawędzie połączone tylko przez wspólny węzeł pośredni.
-
-        BFS rozwiązuje to przez:
-          1. Budowę mapy węzeł → wychodzące krawędzie (z TraCI, raz na start_sim)
-          2. Dla każdego skrzyżowania: BFS od jego krawędzi wyjściowych
-          3. Gdy BFS natrafi na intake innego skrzyżowania → sąsiad znaleziony
-
-        Zwraca: {junction: {neighbor: intake_edge_of_neighbor}}
-        intake_edge_of_neighbor to krawędź tuż przed sąsiadem — idealna
-        do monitorowania przepustowości między węzłami.
-        """
-        # Buduj graf: węzeł → [krawędzie wychodzące z tego węzła]
+        """Wykrywa sąsiednie skrzyżowania przez BFS po grafie krawędzi."""
         node_to_outgoing: dict[str, list[str]] = {}
         for edge_id in self._conn.edge.getIDList():
-            if edge_id.startswith(":"):  # pomiń wewnętrzne krawędzie SUMO
+            if edge_id.startswith(":"):
                 continue
             from_node = self._conn.edge.getFromJunction(edge_id)
             node_to_outgoing.setdefault(from_node, []).append(edge_id)
 
-        # Płaski słownik: intake_edge → junction_id  (do szybkiego sprawdzenia w BFS)
         intake_of: dict[str, str] = {
             edge: junc
             for junc, edges in self.JUNCTION_INTAKE_EDGES.items()
@@ -265,39 +275,8 @@ class SumoManager:
 
                     neighbor = intake_of.get(next_edge)
                     if neighbor is not None and neighbor != junc:
-                        # Znalazłeś intake sąsiada — zapisz i nie idź dalej przez to skrzyżowanie
                         result[junc][neighbor] = next_edge
                     else:
-                        # Krawędź pośrednia — dodaj do kolejki BFS
                         queue.append(next_edge)
 
         return result
-        # Przykład wyniku:
-        # {'Kcynska': {'Zbozowa': 'Zbozowa_1in'},
-        #  'Zbozowa': {'Kcynska': 'Kcynska_Xin', 'Owsiana': 'Owsiana_1in'},
-        #  'Owsiana': {'Zbozowa': 'Zbozowa_Xin'}}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -13,13 +13,15 @@ import random
 import SUMO_manager
 from random_events_func import EventManager
 from collections import deque
-from pettingzoo import ParallelEnv  #bedziemy tego uzywac poniewaz biblioteka gymnasiium sama w sobie nie radzi sobie z wieloma agentami wiec musimy ja rozszerzyc
+from pettingzoo import ParallelEnv
+
 
 class SumoEnv(ParallelEnv):
     """Multi-agent PettingZoo environment wrapping a SUMO traffic simulation.
 
         Each agent controls the traffic light phase at one intersection.
-        Observation: [car_counts(4), ambulances(4), buses(4), detector_status(4), pedestrians(4), sin_time, cos_time]
+        Observation: [car_counts(4), ambulances(4), buses(4), detector_status(4), pedestrians(4), sin_time, cos_time, current_phase(1), neighbor_data(12)]
+        = 35 elementów łącznie
         Actions: 0 = NS green, 1 = WE green
         """
 
@@ -28,35 +30,36 @@ class SumoEnv(ParallelEnv):
         "name": "sumo_krzyzak_v3"
     }
 
-    # Traffic light phase indices (must match NetEdit TLS program)
-    # Correct sequence: NS_GREEN → NS_YELLOW → ALL_RED → WE_GREEN → WE_YELLOW → ALL_RED
-    PHASE_NS_GREEN = 0  # gGrrgGrrrGrG   (active green, NS)
-    PHASE_NS_YELLOW = 1  # yyrryyrrrrrrr  (warning, 3 s)
-    PHASE_ALL_RED_A = 2  # rrrrrrrrrrrr   (safety buffer after NS, 2 s)
-    PHASE_WE_GREEN = 3  # rrgGrrrGGrGr   (active green, WE)
-    PHASE_WE_YELLOW = 4  # rryyrryyrrrr   (warning, 3 s)
-    PHASE_ALL_RED_B = 5  # rrrrrrrrrrrr   (safety buffer after WE, 2 s)
+    PHASE_NS_GREEN = 0
+    PHASE_NS_YELLOW = 1
+    PHASE_ALL_RED_A = 2
+    PHASE_WE_GREEN = 3
+    PHASE_WE_YELLOW = 4
+    PHASE_ALL_RED_B = 5
 
-    # Phase durations in seconds
     YELLOW_DUR = 4.0
     ALLRED_DUR = 3.0
-    GREEN_DUR = 10.0 # active green time per agent decision step
+    GREEN_DUR = 10.0
 
     # Reward weights
-    W_HALTING = 1.0  # queued vehicles penalty
-    W_JAM = 0.2  # jam length penalty
-    W_OCC = 0.5  # occupancy penalty
-    W_SWITCH = 2.0  # phase-switch penalty (discourages oscillation)
-    W_BRAKING = 5.0  # emergency braking penalty
-    W_PRIORITY = 1.0  # priority vehicle penalty/reward multiplier
-    W_PED = 0.7  # pedestrian waiting penalty multiplier
+    W_HALTING = 1.0
+    W_JAM = 0.2
+    W_OCC = 0.5
+    W_SWITCH = 2.0
+    W_BRAKING = 5.0
+    W_PRIORITY = 1.0
+    W_PED = 0.7
 
-    # Reward for priority vehicles that passed without waiting
     REWARD_AMBULANCE_PASS = 20.0
     REWARD_BUS_PASS = 10.0
 
-    # Simulation step length — overwritten from SUMO after start_sim()
     _DEFAULT_SIM_STEP = 0.1
+
+    # FIX #1: Przeniesiono INTERSECTION_CONFIGS tutaj z SumoManager żeby env.py
+    # miał do nich bezpośredni dostęp przez self.INTERSECTION_CONFIGS.
+    # Możesz też zostawić tylko w SumoManager i używać self.sumo.INTERSECTION_CONFIGS —
+    # ważne żeby był ten sam słownik w obu miejscach.
+    INTERSECTION_CONFIGS = SUMO_manager.SumoManager.INTERSECTION_CONFIGS
 
     def __init__(self, config_path: str, gui: bool = False, rank: int = 0):
 
@@ -74,17 +77,16 @@ class SumoEnv(ParallelEnv):
         self.current_step = 0
         self.max_steps = 500
 
-
         self._sim_step = self._DEFAULT_SIM_STEP
         self._update_step_counts()
 
-
-        obs_shape = (35,)  # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 actual phase
+        # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 phase + 12 neighbor = 35
+        obs_shape = (35,)
         self.observation_spaces = {
             agent: spaces.Box(low=-2.0, high=100.0, shape=obs_shape, dtype=np.float32)
             for agent in self.possible_agents
         }
-        
+
         self.action_spaces = {
             agent: spaces.Discrete(2) for agent in self.possible_agents
         }
@@ -95,9 +97,17 @@ class SumoEnv(ParallelEnv):
             for agent in self.possible_agents
         }
 
+        self.target_phase: int | None = None
 
-        self.target_phase: int | None = None  # set externally by CurriculumCallback
-        self.neighbors_dict = self.sumo.check_neighbords()
+        self.sumo.start_sim()
+
+        # FIX #4: Pobieramy rzeczywisty krok symulacji od razu po start_sim(),
+        # nie dopiero w reset(). Dzięki temu _green_steps jest poprawny
+        # nawet jeśli ktoś nie wywoła reset() przed pierwszym step().
+        self._sim_step = self.sumo.get_sim_step_duration()
+        self._update_step_counts()
+
+        self.neighbors_dict = self.sumo.check_neighbors()
         self.ordered_neighbors_edges = {}
         for agent in self.agents:
             my_neighbors = self.neighbors_dict[agent]
@@ -105,7 +115,7 @@ class SumoEnv(ParallelEnv):
                 (n_id, my_neighbors[n_id]) for n_id in sorted(my_neighbors.keys())
             ]
 
-    #PettingZoo API
+    # PettingZoo API
 
     def observation_space(self, agent: str) -> spaces.Space:
         return self.observation_spaces[agent]
@@ -118,8 +128,6 @@ class SumoEnv(ParallelEnv):
             random.seed(seed)
             np.random.seed(seed)
 
-
-
         self.sumo.close_sim()
         self.sumo.start_sim()
 
@@ -127,7 +135,6 @@ class SumoEnv(ParallelEnv):
             agent: self.sumo.get_phase_count(agent) for agent in self.possible_agents
         }
 
-        # Fetch actual simulation step length and recompute loop counts
         self._sim_step = self.sumo.get_sim_step_duration()
         self._update_step_counts()
 
@@ -142,78 +149,79 @@ class SumoEnv(ParallelEnv):
         return self._get_observation(), {agent: {} for agent in self.agents}
 
     def step(self, action: dict[str, int]):
-
         self.current_step += 1
         self.episode_step += 1
 
-        # events
         self._generate_traffic()
-        self.events.emergency_vehicle_deployment(probability=0.01) #emergency
+        self.events.emergency_vehicle_deployment(probability=0.01)
         self._generate_buses()
         self.events.detector_malfunction()
 
-        accumulated_priority_penalty = {agent:0 for agent in self.agents} #for every agent
+        accumulated_priority_penalty: dict[str, float] = {a: 0.0 for a in self.agents}
 
-        # --- Yellow phase (only for agents that changed action) ---
+        changing = {a for a in self.agents if action[a] != self.last_action[a]}
+        steady   = set(self.agents) - changing
+
+        # Phase transition
+        if changing:
+            for agent in changing:
+                cfg = self.INTERSECTION_CONFIGS[agent]
+                # FIX #1: Używamy group_starts zamiast nieistniejącego klucza.
+                # trans_start to pierwsza faza przejściowa (żółta) po aktualnej zielonej.
+                trans_start = cfg["group_starts"][self.last_action[agent]] + 1
+                self.sumo.set_traffic_light_phase(agent, trans_start)
+
+            for agent in steady:
+                cfg = self.INTERSECTION_CONFIGS[agent]
+                self.sumo.set_traffic_light_phase(
+                    agent, cfg["group_starts"][self.last_action[agent]]
+                )
+
+            max_trans = max(
+                self._compute_transition_steps(a, self.last_action[a]) for a in changing
+            )
+            for _ in range(max_trans):
+                self.sumo.simulation_step()
+
+            for agent in self.agents:
+                # FIX #3: _instant_priority_penalty zwraca wartości ujemne.
+                # Akumulujemy je jako penalty (nie bonus) — odejmujemy w _get_reward.
+                accumulated_priority_penalty[agent] += (
+                    self._instant_priority_penalty(agent, self.last_action[agent]) * max_trans
+                )
+
+        # Active green
         for agent in self.agents:
-            if action[agent] != self.last_action[agent]:
-                yellow_phase = self.PHASE_NS_YELLOW if self.last_action[agent] == 0 else self.PHASE_WE_YELLOW
-                self.sumo.set_traffic_light_phase(agent, yellow_phase)
+            cfg = self.INTERSECTION_CONFIGS[agent]
+            self.sumo.set_traffic_light_phase(agent, cfg["group_starts"][action[agent]])
 
-        for _ in range(self._yellow_steps):
-            self.sumo.simulation_step()
-
-        for agent in self.agents:
-            step_penalty=self._instant_priority_penalty(agent, self.last_action[agent])
-            accumulated_priority_penalty[agent] += step_penalty*self._yellow_steps
-
-        # --- All-red buffer (only for agents that changed action) ---
-        for agent in self.agents:
-            if action[agent] != self.last_action[agent]:
-                allred_phase = self.PHASE_ALL_RED_A if self.last_action[agent] == 0 else self.PHASE_ALL_RED_B
-                self.sumo.set_traffic_light_phase(agent, allred_phase)
-
-        for _ in range(self._allred_steps):
-            self.sumo.simulation_step()
-
-        for agent in self.agents:
-            step_penalty=self._instant_priority_penalty(agent, self.last_action[agent])
-            accumulated_priority_penalty[agent] += step_penalty*self._allred_steps
-        # --- Set new green phase ---
-        for agent in self.agents:
-            green_phase = self.PHASE_NS_GREEN if action[agent] == 0 else self.PHASE_WE_GREEN
-            self.sumo.set_traffic_light_phase(agent, green_phase)
-
-        # --- Active green phase ---
         for _ in range(self._green_steps):
             self.sumo.simulation_step()
 
         for agent in self.agents:
-            step_penalty=self._instant_priority_penalty(agent, action[agent])
-            accumulated_priority_penalty[agent] += step_penalty*self._green_steps
+            accumulated_priority_penalty[agent] += (
+                self._instant_priority_penalty(agent, action[agent]) * self._green_steps
+            )
 
+        # Collect results
         observations = self._get_observation()
-        rewards = {}
-        terminated = {}
-        truncated = {}
-
-        is_simulation_empty = False
+        rewards, terminated, truncated = {}, {}, {}
         is_time_up = self.episode_step >= self.max_steps
 
         for agent in self.agents:
-            metrics = self.sumo.get_junction_metrics(agent)
+            metrics       = self.sumo.get_junction_metrics(agent)
             passing_bonus = self.sumo.get_gps_status(agent)
-            action_changed = action[agent] != self.last_action[agent]
+            action_changed = agent in changing
 
-            rewards[agent] = self._get_reward(agent, metrics, action_changed,
-                                              accumulated_priority_penalty[agent],
-                                              passing_bonus)
-            terminated[agent] = is_simulation_empty
-            truncated[agent] = is_time_up
+            rewards[agent]    = self._get_reward(
+                agent, metrics, action_changed,
+                accumulated_priority_penalty[agent], passing_bonus,
+            )
+            terminated[agent] = False
+            truncated[agent]  = is_time_up
 
         self.last_action = dict(action)
-
-        return observations, rewards, terminated, truncated, {agent: {} for agent in self.agents}
+        return observations, rewards, terminated, truncated, {a: {} for a in self.agents}
 
     def close(self) -> None:
         self.sumo.close_sim()
@@ -244,15 +252,18 @@ class SumoEnv(ParallelEnv):
                 + self.W_OCC * metrics["occupancy"]
                 + switch_penalty
                 + braking_penalty
+                # FIX #3: priority_penalty jest ujemne (z _instant_priority_penalty),
+                # więc odejmujemy je przez dodanie W_PRIORITY * priority_penalty
+                # do penalty (ujemna * ujemna = dodatnia kara).
+                # Używamy abs() żeby intencja była czytelna.
+                + self.W_PRIORITY * abs(priority_penalty)
         )
         bonus = (
-                self.W_PRIORITY * priority_penalty
-                + self.W_PRIORITY * priority_reward
-                + self.W_PED * ped_penalty
+                self.W_PRIORITY * priority_reward
+                + ped_penalty  # ped_penalty jest już ujemne z _pedestrian_penalty
         )
         return float(bonus - penalty)
 
-    # Per-step priority penalty (called inside simulation loops)
     def _instant_priority_penalty(self, agent: str, current_action: int) -> float:
         """Returns a negative penalty if a priority vehicle is waiting at a red signal."""
         penalty = 0.0
@@ -282,13 +293,17 @@ class SumoEnv(ParallelEnv):
             buses = self.sumo.get_veh_presence("city_bus", agent)
             status = self.events.detector_status[agent]
             pedestrians = self.sumo.get_pedestrian_presence(agent)
-            neighbor_data=[]
+            neighbor_data = []
             for neighbor_id, edge in self.ordered_neighbors_edges[agent]:
-                cars = float(self.sumo.tc.edge.getLastStepVehicleNumber(edge))
+                # FIX #2: Używamy self.sumo._conn zamiast self.sumo.tc.
+                # self.sumo.tc to sam moduł, _conn to aktywne połączenie.
+                # W trybie GUI z wieloma symulacjami tc.edge czyta z złego połączenia.
+                cars = float(self.sumo._conn.edge.getLastStepVehicleNumber(edge))
                 phase = float(self.last_action[neighbor_id])
                 neighbor_data.extend([1.0, cars, phase])
 
-            while len(neighbor_data)<12:
+            # Dopełnienie do 12 elementów (max 4 sąsiadów × 3 wartości)
+            while len(neighbor_data) < 12:
                 neighbor_data.append(0.0)
 
             current_phase = [float(self.last_action[agent])]
@@ -318,17 +333,7 @@ class SumoEnv(ParallelEnv):
     # Pedestrian penalty
 
     def _pedestrian_penalty(self, agent: str) -> float:
-        """Returns a negative penalty for each pedestrian held at a red crossing.
-
-        Crossing geometry:
-          idx 0,1 = N/S approaches → piesi przechodzą przez jezdnię EW
-                    bezpieczne gdy auta NS jadą (action=0, EW red)
-                    CZERWONE gdy WE zielone (action=1) → on_red gdy action==1
-
-          idx 2,3 = E/W approaches → piesi przechodzą przez jezdnię NS
-                    bezpieczne gdy auta WE jadą (action=1, NS red)
-                    CZERWONE gdy NS zielone (action=0) → on_red gdy action==0
-        """
+        """Returns a negative penalty for each pedestrian held at a red crossing."""
         penalty = 0.0
         last_action = self.last_action[agent]
 
@@ -346,16 +351,15 @@ class SumoEnv(ParallelEnv):
         if not self.events.available_routes:
             self.events.find_routes()
 
-        spawn_attempts = 10 * len(self.events.INTAKES)
+        spawn_attempts = 1 * len(self.events.INTAKES)
         for _ in range(spawn_attempts):
             self.events.spawn_dynamic_traffic(self.current_step)
 
     def _generate_buses(self) -> None:
         bus_lines = [
-            # (route_id,         stops,                                  line_name,        interval)
-            ("route_1b", ["Kcynska02", "Zbozowa02","Owsiana02"], "Bus_A", 200),
-            ("route_2b", ["CisowaSibeliusa01", "Owsiana01","Zbozowa01","Kcynska01"], "Bus_B", 200),
-            ("route_3b", ["Owsiana01", "Zbozowa01","Kcynska01"], "Bus_C", 200),
+            ("route_1b", ["Kcynska02", "Zbozowa02", "Owsiana02"], "Bus_A", 200),
+            ("route_2b", ["CisowaSibeliusa01", "Owsiana01", "Zbozowa01", "Kcynska01"], "Bus_B", 200),
+            ("route_3b", ["Owsiana01", "Zbozowa01", "Kcynska01"], "Bus_C", 200),
         ]
         for route_id, stops, line_name, interval in bus_lines:
             self.events.scheduled_bus_deployment(
@@ -369,7 +373,7 @@ class SumoEnv(ParallelEnv):
         """Called by CurriculumCallback to pin the time-of-day phase for training."""
         self.target_phase = phase
 
-    # Internal jelpers
+    # Internal helpers
 
     def _update_step_counts(self) -> None:
         """Recomputes simulation loop counts from the current step duration."""
@@ -397,3 +401,23 @@ class SumoEnv(ParallelEnv):
             return random.randint(lo, hi)
 
         return random.randint(0, 24 * hour)
+
+    def _compute_transition_steps(self, agent: str, last_action: int) -> int:
+        """Oblicza liczbę kroków symulacji potrzebnych na przejście fazowe (żółta + all-red)."""
+        cfg = self.INTERSECTION_CONFIGS[agent]
+        group_start = cfg["group_starts"][last_action]
+        phase_lengths = cfg["phase_length"]
+
+        # Fazy przejściowe to wszystko między group_starts[last_action]+1
+        # a group_starts[next_action] (czyli do następnej zielonej)
+        next_action = 1 - last_action  # przełączamy między 0 i 1
+        next_green = cfg["group_starts"][next_action]
+
+        total_duration = 0.0
+        # Sumujemy długości faz przejściowych
+        i = group_start + 1
+        while i != next_green:
+            total_duration += phase_lengths[i % len(phase_lengths)]
+            i = (i + 1) % len(phase_lengths)
+
+        return max(1, round(total_duration / self._sim_step))

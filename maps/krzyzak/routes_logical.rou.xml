@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <routes>
-    <vType id="car" accel="2.6" decel="4.5" length="5.0" maxspeed="70.0"/>
+
     <route id="route_0" edges="-286967103 136687277#2"/>
     <route id="route_1" edges="-286967103 180623102#1"/>
     <route id="route_2" edges="-286967103 Owsiana_2in Owsiana_1out"/>
