@@ -31,15 +31,15 @@ class SumoManager:
     INTERSECTION_CONFIGS = {
         "Kcynska": {
             "num_phases": 10,
-            "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
+            "phase_length": [28, 5, 5, 6, 5, 28, 5, 5, 6, 5],
         },
         "Zbozowa": {
             "num_phases": 9,
-            "phase_length": [32, 5, 3, 6, 3, 1, 32, 5, 3],
+            "phase_length": [32, 5, 5, 6, 5, 1, 32, 5, 5],
         },
         "Owsiana": {
             "num_phases": 10,
-            "phase_length": [28, 5, 3, 6, 3, 28, 5, 3, 6, 3],
+            "phase_length": [28, 5, 5, 6, 5, 28, 5, 5, 6, 5],
         }
     }
 

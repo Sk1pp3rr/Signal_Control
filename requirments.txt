@@ -10,3 +10,4 @@ tensorboard
 setuptools<70.0.0
 libsumo
 pettingzoo
+supersuit

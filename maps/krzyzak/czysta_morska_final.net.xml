@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-05-24T13:49:46.623836+01:00 by Eclipse SUMO netedit 1.26.0
+<!-- generated on 2026-05-26T10:09:17.694753+01:00 by Eclipse SUMO netedit 1.26.0
 <neteditConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/neteditConfiguration.xsd">
 
     <input>
-        <additional-files value="C:\TytusPikies\sem4\SI\Projekt-repo\Signal_Control\maps\detectors.add.xml"/>
-        <sumo-net-file value="C:\TytusPikies\sem4\SI\Projekt-repo\Signal_Control\maps\czysta_morska_final.net.xml"/>
+        <sumo-net-file value="D:\Macki\4sem\Signal_Control\maps\krzyzak\czysta_morska_final.net.xml"/>
     </input>
 
     <output>
-        <output-file value="C:\TytusPikies\sem4\SI\Projekt-repo\Signal_Control\maps\czysta_morska_final.net.xml"/>
+        <output-file value="D:\Macki\4sem\Signal_Control\maps\krzyzak\czysta_morska_final.net.xml"/>
     </output>
 
     <processing>
@@ -729,37 +728,37 @@
     <tlLogic id="cluster12708301500_12708314102_1309390847_1876644683_#2more" type="static" programID="0" offset="0">
         <phase duration="32" state="gGGgrrrrgGGgrrrGrG"/>
         <phase duration="5"  state="gGGgrrrrgGGgrrrrrr"/>
-        <phase duration="3"  state="yyygrrrryyygrrrrrr"/>
+        <phase duration="5"  state="yyygrrrryyygrrrrrr"/>
         <phase duration="6"  state="rrrGrrrrrrrGrrrrrr"/>
-        <phase duration="3"  state="rrryrrrrrrryrrrrrr"/>
+        <phase duration="5"  state="rrryrrrrrrryrrrrrr"/>
         <phase duration="1"  state="rrrrrrrrrrrrrrrrrr"/>
         <phase duration="32" state="rrrrggggrrrrgGGrGr"/>
         <phase duration="5"  state="rrrrggggrrrrgGGrrr"/>
-        <phase duration="3"  state="rrrryyyyrrrryyyrrr"/>
+        <phase duration="5"  state="rrrryyyyrrrryyyrrr"/>
     </tlLogic>
     <tlLogic id="cluster1876650944_300760980" type="static" programID="0" offset="0">
         <phase duration="28" state="rrrrgGGgrrrrgGGGgGGr"/>
         <phase duration="5"  state="rrrrgGGgrrrrgGGGgrrr"/>
-        <phase duration="3"  state="rrrryyygrrrryyyygrrr"/>
+        <phase duration="5"  state="rrrryyygrrrryyyygrrr"/>
         <phase duration="6"  state="rrrrrrrGrrrrrrrrGrrr"/>
-        <phase duration="3"  state="rrrrrrryrrrrrrrryrrr"/>
+        <phase duration="5"  state="rrrrrrryrrrrrrrryrrr"/>
         <phase duration="28" state="gGggrrrrGGggrrrrrrrG"/>
         <phase duration="5"  state="gGggrrrrGGggrrrrrrrr"/>
-        <phase duration="3"  state="yyggrrrryyggrrrrrrrr"/>
+        <phase duration="5"  state="yyggrrrryyggrrrrrrrr"/>
         <phase duration="6"  state="rrGGrrrrrrGGrrrrrrrr"/>
-        <phase duration="3"  state="rryyrrrrrryyrrrrrrrr"/>
+        <phase duration="5"  state="rryyrrrrrryyrrrrrrrr"/>
     </tlLogic>
     <tlLogic id="cluster300760946_300760949_300760970_300760977" type="static" programID="0" offset="0">
         <phase duration="28" state="rrrgGGgrrrrgGGgGrGr"/>
         <phase duration="5"  state="rrrgGGgrrrrgGGgrrrr"/>
-        <phase duration="3"  state="rrryyygrrrryyygrrrr"/>
+        <phase duration="5"  state="rrryyygrrrryyygrrrr"/>
         <phase duration="6"  state="rrrrrrGrrrrrrrGrrrr"/>
-        <phase duration="3"  state="rrrrrryrrrrrrryrrrr"/>
+        <phase duration="5"  state="rrrrrryrrrrrrryrrrr"/>
         <phase duration="28" state="gGgrrrrgGggrrrrrGrG"/>
         <phase duration="5"  state="gGgrrrrgGggrrrrrrrr"/>
-        <phase duration="3"  state="yygrrrryyggrrrrrrrr"/>
+        <phase duration="5"  state="yygrrrryyggrrrrrrrr"/>
         <phase duration="6"  state="rrGrrrrrrGGrrrrrrrr"/>
-        <phase duration="3"  state="rryrrrrrryyrrrrrrrr"/>
+        <phase duration="5"  state="rryrrrrrryyrrrrrrrr"/>
     </tlLogic>
 
     <junction id="1340307668" type="priority" x="576.08" y="741.63" incLanes="Owsiana_4out_0 Owsiana_4out_1 Owsiana_4out_2" intLanes=":1340307668_0_0 :1340307668_0_1 :1340307668_0_2" shape="581.40,744.44 578.25,736.02 570.75,738.83 573.93,747.25">
