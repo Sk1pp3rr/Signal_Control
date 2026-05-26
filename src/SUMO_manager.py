@@ -9,8 +9,8 @@ class SumoManager:
 
     TL_IDS = {
         "Kcynska": "cluster1876650944_300760980",
-        "Zbozowa": "cluster300760946_300760949_300760970_300760977",
-        "Owsiana": "cluster12708301500_12708314102_1309390847_1876644683_#2more"
+        "Zbozowa": "cluster12708301500_12708314102_1309390847_1876644683_#2more",
+        "Owsiana": "cluster300760946_300760949_300760970_300760977"
     }
 
     JUNCTION_INTAKE_EDGES = {
@@ -52,6 +52,7 @@ class SumoManager:
         self._sumo_cmd = ["sumo-gui" if gui else "sumo", "-c", config_path, "--start"]
         self.possible_agents = ["Kcynska", "Zbozowa", "Owsiana"]
         self.agents = self.possible_agents[:]
+        self.valid_detectors = set()
 
     # Internal helpers
     @property
@@ -66,6 +67,8 @@ class SumoManager:
             self.tc.start(self._sumo_cmd, label=self.label)
         else:
             self.tc.start(self._sumo_cmd)
+
+        self.valid_detectors = set(self._conn.lanearea.getIDList())
 
     def close_sim(self):
         """Closes the running SUMO simulation, ignoring errors if already closed."""
@@ -119,11 +122,12 @@ class SumoManager:
         total = 0.0
         for lane_idx in range(1, 5):  # Check if lanes exists from _1 to _4
             det_id = f"det_{junction_id}_{wlot}_{lane_idx}"
-            try:
-                if det_id in self._conn.lanearea.getIDList():
+
+            if det_id in self.valid_detectors:
+                try:
                     total += traci_func(det_id)
-            except Exception:
-                break
+                except Exception:
+                    break
         return total
 
     def get_detector_data(self, junction_id: str) -> list[int]:
