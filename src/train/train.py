@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Tuple
 
@@ -7,18 +6,15 @@ from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 from stable_baselines3.common.vec_env import VecEnv, VecMonitor
 import supersuit as ss
 
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.utils import set_random_seed
-
-from SumoCurriculumWrapper import CurriculumCallback
-from env import SumoEnv
+from core.SumoCurriculumWrapper import CurriculumCallback
+from core.env import SumoEnv
 
 # Global Configuration
 
 BASE_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = (BASE_DIR / ".." / "maps" / "krzyzak" / "krzyzak.sumocfg").resolve()
-RESULTS_DIR = (BASE_DIR / ".." / "results").resolve()
-TENSORBOARD_LOG_DIR = "./ppo_sumo_tensorboard/"
+CONFIG_PATH = (BASE_DIR / ".." / ".." / "maps" / "krzyzak" / "krzyzak.sumocfg").resolve()
+RESULTS_DIR = (BASE_DIR / ".." / ".." / "results").resolve()
+TENSORBOARD_LOG_DIR = "../ppo_sumo_tensorboard/"
 
 TOTAL_TIMESTEPS = 2_000_000
 CHECKPOINT_FREQ = 50_000

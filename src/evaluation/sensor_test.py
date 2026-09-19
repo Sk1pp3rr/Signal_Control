@@ -5,14 +5,14 @@ import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # path from src to sumo config
-CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
+CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "../..", "maps", "krzyzak", "krzyzak.sumocfg"))
 
 print(f"Looking for file in: {CONFIG_PATH}")
 
 if not os.path.exists(CONFIG_PATH):
     print("file not found")
     # Python view:
-    print(f"Upstream folder: {os.listdir(os.path.join(BASE_DIR, '..'))}")
+    print(f"Upstream folder: {os.listdir(os.path.join(BASE_DIR, '../..'))}")
     sys.exit()
 
 import traci

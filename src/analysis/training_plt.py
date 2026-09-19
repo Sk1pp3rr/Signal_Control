@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-CSV_FILE_PATH = "monitor.csv"
+CSV_FILE_PATH = "../plots/monitor.csv"
 OUTPUT_IMAGE = "wykresy_treningu123.png"
 
 

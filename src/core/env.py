@@ -7,13 +7,11 @@ from __future__ import annotations
 
 import math
 
-import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-import traci
 import random
-import SUMO_manager
-from random_events_func import EventManager
+from core import SUMO_manager
+from core.random_events_func import EventManager
 from collections import deque
 from pettingzoo import ParallelEnv
 
@@ -43,6 +41,8 @@ class SumoEnv(ParallelEnv):
     ALLRED_DUR = 3.0
     GREEN_DUR = 10.0
 
+    MIN_GREEN_STEPS = 3
+
     # Reward weights
     W_HALTING = 1.0
     W_JAM = 0.2
@@ -57,10 +57,6 @@ class SumoEnv(ParallelEnv):
 
     _DEFAULT_SIM_STEP = 0.1
 
-    # FIX #1: Przeniesiono INTERSECTION_CONFIGS tutaj z SumoManager żeby env.py
-    # miał do nich bezpośredni dostęp przez self.INTERSECTION_CONFIGS.
-    # Możesz też zostawić tylko w SumoManager i używać self.sumo.INTERSECTION_CONFIGS —
-    # ważne żeby był ten sam słownik w obu miejscach.
     INTERSECTION_CONFIGS = SUMO_manager.SumoManager.INTERSECTION_CONFIGS
 
     def __init__(self, config_path: str, gui: bool = False, rank: int = 0):
@@ -82,7 +78,6 @@ class SumoEnv(ParallelEnv):
         self._sim_step = self._DEFAULT_SIM_STEP
         self._update_step_counts()
 
-        # 4 cars + 4 ambulances + 4 buses + 4 status + 4 pedestrians + 2 time + 1 phase + 12 neighbor = 35
         obs_shape = (35,)
         self.observation_spaces = {
             agent: spaces.Box(low=-2.0, high=100.0, shape=obs_shape, dtype=np.float32)
@@ -94,6 +89,7 @@ class SumoEnv(ParallelEnv):
         }
 
         self.last_action: dict[str, int] = {agent: 0 for agent in self.possible_agents}
+        self.steps_in_phase: dict[str, int] = {agent: 0 for agent in self.possible_agents}
         self.detector_history: dict[str, list[deque]] = {
             agent: [deque(maxlen=100) for _ in range(4)]
             for agent in self.possible_agents
@@ -103,9 +99,6 @@ class SumoEnv(ParallelEnv):
 
         self.sumo.start_sim()
 
-        # FIX #4: Pobieramy rzeczywisty krok symulacji od razu po start_sim(),
-        # nie dopiero w reset(). Dzięki temu _green_steps jest poprawny
-        # nawet jeśli ktoś nie wywoła reset() przed pierwszym step().
         self._sim_step = self.sumo.get_sim_step_duration()
         self._update_step_counts()
 
@@ -146,6 +139,7 @@ class SumoEnv(ParallelEnv):
 
         for agent in self.agents:
             self.last_action[agent] = 0
+            self.steps_in_phase[agent] = 0
             self.events.detector_status[agent] = [1, 1, 1, 1]
 
         return self._get_observation(), {agent: {} for agent in self.agents}
@@ -161,6 +155,15 @@ class SumoEnv(ParallelEnv):
 
         accumulated_priority_penalty: dict[str, float] = {a: 0.0 for a in self.agents}
 
+        effective_action: dict[str, int] = dict(action)
+        for agent in self.agents:
+            if (
+                action[agent] != self.last_action[agent]
+                and self.steps_in_phase[agent] < self.MIN_GREEN_STEPS
+            ):
+                effective_action[agent] = self.last_action[agent]
+        action = effective_action
+
         changing = {a for a in self.agents if action[a] != self.last_action[a]}
         steady   = set(self.agents) - changing
 
@@ -168,8 +171,6 @@ class SumoEnv(ParallelEnv):
         if changing:
             for agent in changing:
                 cfg = self.INTERSECTION_CONFIGS[agent]
-                # FIX #1: Używamy group_starts zamiast nieistniejącego klucza.
-                # trans_start to pierwsza faza przejściowa (żółta) po aktualnej zielonej.
                 trans_start = cfg["group_starts"][self.last_action[agent]] + 1
                 self.sumo.set_traffic_light_phase(agent, trans_start)
 
@@ -222,6 +223,12 @@ class SumoEnv(ParallelEnv):
             terminated[agent] = False
             truncated[agent]  = is_time_up
 
+        for agent in self.agents:
+            if agent in changing:
+                self.steps_in_phase[agent] = 0
+            else:
+                self.steps_in_phase[agent] += 1
+
         self.last_action = dict(action)
         return observations, rewards, terminated, truncated, {a: {} for a in self.agents}
 
@@ -254,15 +261,11 @@ class SumoEnv(ParallelEnv):
                 + self.W_OCC * metrics["occupancy"]
                 + switch_penalty
                 + braking_penalty
-                # FIX #3: priority_penalty jest ujemne (z _instant_priority_penalty),
-                # więc odejmujemy je przez dodanie W_PRIORITY * priority_penalty
-                # do penalty (ujemna * ujemna = dodatnia kara).
-                # Używamy abs() żeby intencja była czytelna.
                 + self.W_PRIORITY * abs(priority_penalty)
         )
         bonus = (
                 self.W_PRIORITY * priority_reward
-                + ped_penalty  # ped_penalty jest już ujemne z _pedestrian_penalty
+                + ped_penalty
         )
         return float(bonus - penalty)
 
@@ -297,14 +300,10 @@ class SumoEnv(ParallelEnv):
             pedestrians = self.sumo.get_pedestrian_presence(agent)
             neighbor_data = []
             for neighbor_id, edge in self.ordered_neighbors_edges[agent]:
-                # FIX #2: Używamy self.sumo._conn zamiast self.sumo.tc.
-                # self.sumo.tc to sam moduł, _conn to aktywne połączenie.
-                # W trybie GUI z wieloma symulacjami tc.edge czyta z złego połączenia.
                 cars = float(self.sumo._conn.edge.getLastStepVehicleNumber(edge))
                 phase = float(self.last_action[neighbor_id])
                 neighbor_data.extend([1.0, cars, phase])
 
-            # Dopełnienie do 12 elementów (max 4 sąsiadów × 3 wartości)
             while len(neighbor_data) < 12:
                 neighbor_data.append(0.0)
 
@@ -353,7 +352,7 @@ class SumoEnv(ParallelEnv):
         if not self.events.available_routes:
             self.events.find_routes()
 
-        spawn_attempts = 1 * len(self.events.INTAKES)
+        spawn_attempts = 4 * len(self.events.INTAKES)
         for _ in range(spawn_attempts):
             self.events.spawn_dynamic_traffic(self.current_step)
 
@@ -410,13 +409,10 @@ class SumoEnv(ParallelEnv):
         group_start = cfg["group_starts"][last_action]
         phase_lengths = cfg["phase_length"]
 
-        # Fazy przejściowe to wszystko między group_starts[last_action]+1
-        # a group_starts[next_action] (czyli do następnej zielonej)
         next_action = 1 - last_action  # przełączamy między 0 i 1
         next_green = cfg["group_starts"][next_action]
 
         total_duration = 0.0
-        # Sumujemy długości faz przejściowych
         i = group_start + 1
         while i != next_green:
             total_duration += phase_lengths[i % len(phase_lengths)]

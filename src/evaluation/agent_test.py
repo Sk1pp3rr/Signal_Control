@@ -2,12 +2,12 @@ import os
 import time
 from stable_baselines3 import PPO
 import supersuit as ss
-from env import SumoEnv
+from core.env import SumoEnv
 import matplotlib.pyplot as plt
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "results", "model_krzyzak_final.zip"))
+CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "../..", "maps", "krzyzak", "krzyzak.sumocfg"))
+MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "../..", "results", "model_krzyzak_final.zip"))
 
 TEST_PHASE = 3
 TEST_STEPS = 500

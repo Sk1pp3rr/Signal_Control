@@ -33,10 +33,6 @@ class SumoManager:
         "Owsiana": {0: 0, 1: 5}
     }
 
-    # FIX #1: Dodano "group_starts" do każdego skrzyżowania.
-    # group_starts[akcja] = indeks fazy zielonej dla danej akcji (0=NS, 1=WE).
-    # trans_start = group_starts[akcja] + 1 to faza przejściowa (żółta/all-red).
-    # Wartości muszą zgadzać się z programem TLS w pliku XML SUMO!
     INTERSECTION_CONFIGS = {
         "Kcynska": {
             "num_phases": 10,

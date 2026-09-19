@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import traci
 from stable_baselines3 import PPO
 
-from env import SumoEnv
-from baseline_fixed import run_fixed_baseline
-from other_metods.baseline_actuated import run_actuated_baseline
+from core.env import SumoEnv
+from evaluation.baselines.baseline_fixed import run_fixed_baseline
+from evaluation.baselines.baseline_actuated import run_actuated_baseline
 
 MAX_SIM_TIME = 3600
 SEED = 12345
@@ -89,8 +89,8 @@ def plot_comparisons(fixed_metrics, actuated_metrics, ppo_metrics):
 
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "maps", "krzyzak", "krzyzak.sumocfg"))
-    MODEL_PATH = os.path.join(BASE_DIR, "..","..","models", "model_krzyzak_v4.zip")
+    CONFIG_PATH = os.path.abspath(os.path.join(BASE_DIR, "../..", "..", "maps", "krzyzak", "krzyzak.sumocfg"))
+    MODEL_PATH = os.path.join(BASE_DIR, "../..", "..", "models", "model_krzyzak_v4.zip")
 
     res_fixed = run_fixed_baseline(CONFIG_PATH, max_sim_time=MAX_SIM_TIME, seed=SEED)
     res_actuated = run_actuated_baseline(CONFIG_PATH, max_sim_time=MAX_SIM_TIME, seed=SEED)

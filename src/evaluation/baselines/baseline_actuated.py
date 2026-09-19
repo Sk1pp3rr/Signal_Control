@@ -1,7 +1,7 @@
 import traci
 import random
-from SUMO_manager import SumoManager
-from random_events_func import eventManager
+from core.SUMO_manager import SumoManager
+from core.random_events_func import eventManager
 
 
 def run_actuated_baseline(config_path, max_sim_time=3600, seed=42):
@@ -127,5 +127,5 @@ def run_actuated_baseline(config_path, max_sim_time=3600, seed=42):
 if __name__ == "__main__":
     import os
 
-    config = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "maps", "krzyzak", "krzyzak.sumocfg"))
+    config = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "..", "maps", "krzyzak", "krzyzak.sumocfg"))
     print(run_actuated_baseline(config, max_sim_time=3600))

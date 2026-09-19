@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import traci
 import random
 
@@ -14,12 +16,12 @@ class EventManager:
     HOUR_STEP = 720
 
     TRAFFIC_PROBS = {
-            0: 0.03,
-            1: 0.10,
-            2: 0.30,
-            3: 0.15,
-            4: 0.25,
-            5: 0.10
+            0: 0.15,
+            1: 0.40,
+            2: 0.90,
+            3: 0.60,
+            4: 0.85,
+            5: 0.40
     }
 
     INTAKES = ["-286967103", "169121911#1", "-27398735", "-177211203#1", "Kcynska_3in", "27398644#1", "53533699",

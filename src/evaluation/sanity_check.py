@@ -1,9 +1,9 @@
 import sys
 import traceback
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict
 
-from env import SumoEnv
+from core.env import SumoEnv
 
 
 def run_sanity_check() -> None:
